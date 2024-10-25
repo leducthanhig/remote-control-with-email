@@ -1,11 +1,14 @@
 #include "utils.h"
 
-#define SLEEP 60
-
 int main() {
     system("chcp 65001");
     system("cls");
     
+    if (!AfxSocketInit()) {
+        cerr << "\nFailed to initialize sockets. Error: " << GetLastError() << endl;
+        return 0;
+    }
+
     string acceptAddress;
     cout << "Enter the email address that you will use to send mails: ";
     cin >> acceptAddress;
@@ -21,13 +24,16 @@ int main() {
             if (responseData["resultSizeEstimate"] != 0) {
                 cout << "\nGetting mail's data...\n";
                 response = getMessage(responseData["messages"][0]["id"]);
-                string subject = getMessageSubject(json::parse(response));
-                string body = json::parse(response)["snippet"];
-            
+                json response_json = json::parse(response);
+                
+                string subject = getMessageSubject(response_json);
+                string body = response_json["snippet"];
                 if (subject == "") subject = "(empty)";
                 if (body == "") body = "(empty)";
                 cout << "\nFrom: " << acceptAddress << "\nSubject: " << subject << "\nBody: " << body << endl;
             
+                connectAndSendMessage(wstring(subject.begin(), subject.end()), wstring(body.begin(), body.end()));
+
                 cout << "\nTrashing mail...\n";
                 response = trashMessage(responseData["messages"][0]["id"]);
                 cout << response << endl;
@@ -36,11 +42,11 @@ int main() {
                 cout << "\nNo unread mails found!\n";
             }
         }
-        catch (...) {
-            cerr << "\nError: " << GetLastError() << endl;
+        catch (const exception& e) {
+            cerr << "\nException: " << e.what() << endl;
         }
-        cout << "\nSleeping for " << SLEEP << " seconds...\n";
-        this_thread::sleep_for(chrono::seconds(SLEEP));
+        cout << "\nSleeping for " << SLEEP_TIME << " seconds...\n";
+        this_thread::sleep_for(chrono::seconds(SLEEP_TIME));
     }
     return 0;
 }

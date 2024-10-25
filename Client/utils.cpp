@@ -161,14 +161,31 @@ string trashMessage(string id) {
     return "\nTrashed successfully!";
 }
 
-string getMessageSubject(json message) {
-    string subject = "";
-    json headers = message["payload"]["headers"];
-    for (json header: headers) {
+string getMessageSubject(json& message) {
+    json& headers = message["payload"]["headers"];
+    for (json& header: headers) {
         if (header["name"] == "Subject") {
-            subject = header["value"];
-            break;
+            return header["value"];
         }
     }
-    return subject;
+    return "";
+}
+
+void connectAndSendMessage(wstring message, wstring ipAddress) {
+    CSocket client;
+    // [c++ - CSocket:: Create throwing exception in my MFC application - Stack Overflow](https://stackoverflow.com/a/2156303)
+    client.m_hSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+    if (!client.Connect(ipAddress.c_str(), PORT)) {
+        cerr << "\nFailed to connect to server. Error: " << GetLastError() << endl;
+    }
+    cout << "\nConnected to the server!\n";
+
+    client.Send(message.c_str(), (message.size() + 1) * sizeof(wchar_t));
+
+    vector<wchar_t> buffer(BUFFER_SIZE);
+    client.Receive(buffer.data(), BUFFER_SIZE * sizeof(wchar_t));
+    wcout << "\nReceived from server:\n" << buffer.data() << endl;
+
+    closesocket(client.m_hSocket);
 }
