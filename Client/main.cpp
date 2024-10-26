@@ -18,16 +18,6 @@ int main() {
         return 0;
     }
 
-    /*string cmd;
-    while (cmd.find("exit") == string::npos) {
-        cout << "\nEnter command: ";
-        getline(cin, cmd);
-        string receivedMessage, receivedFilePath;
-        handleMessage(cmd, "127.0.0.1", receivedMessage, receivedFilePath);
-        cout << receivedMessage << "\n" << receivedFilePath << endl;
-    }*/
-
-//#if 0
     // Get accept mail address
     string acceptAddress;
     cout << "Enter the email address that you will use to send mails: ";
@@ -46,7 +36,7 @@ int main() {
             if (responseData["resultSizeEstimate"] != 0) {
                 // Get mail data
                 cout << "\nGetting mail's data...\n";
-                response = getMail(responseData["messages"][0]["id"]);
+                response = getMail(responseData["messages"].back()["id"]);
                 json response_json = json::parse(response);
                 
                 // Get and print out the mail subject and a snippet of the body
@@ -62,7 +52,7 @@ int main() {
 
                 // Trash the handled mail
                 cout << "\nTrashing mail...\n";
-                response = trashMail(responseData["messages"][0]["id"]);
+                response = trashMail(responseData["messages"].back()["id"]);
                 if (response.find("error") == string::npos) {
                     cout << "\nTrashed mail successfully.\n";
                 }
@@ -70,11 +60,11 @@ int main() {
                 // Send back to the sender the server message
                 response = sendMail(acceptAddress, getUserEmailAddress(), "Server response", receivedMessage, receivedFilePath);
                 if (response.find("error") == string::npos) {
-                    cout << "\Sent mail successfully.\n";
+                    cout << "\nSent mail successfully.\n";
                 }
                 
                 // Exit loop when received 'exit' message
-                if (response.find("exit") == 0) break;
+                if (subject.find("exit") == 0) break;
             }
             else {
                 cout << "\nNo unread mails found!\n";
@@ -87,6 +77,5 @@ int main() {
         cout << "\nSleeping for " << SLEEP_TIME << " seconds...\n";
         this_thread::sleep_for(chrono::seconds(SLEEP_TIME));
     }
-//#endif
     return 0;
 }

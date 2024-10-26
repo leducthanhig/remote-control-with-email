@@ -26,7 +26,7 @@ int main() {
         
     char buffer[BUFFER_SIZE]{ 0 };
     string cmd, opt;
-    while (cmd.find("exit") == string::npos) {
+    while (1) {
         // Accept client connection
         CSocket client;
         if (!server.Accept(client)) {
@@ -43,6 +43,17 @@ int main() {
         inp.str(buffer);
         inp.seekg(0);
         inp >> cmd >> opt;
+
+        if (cmd.find("exit") != string::npos) {
+            // Send message to client
+            client.Send("Server stopped!", 16);
+            
+            // Close client socket
+            client.Close();
+            cout << "\nClient disconnected!\n";
+
+            break;
+        }
 
         try {
             // Call corresponding handler
@@ -74,11 +85,12 @@ int main() {
         }
         
         // Close client socket
-        client.Close();
         cout << "\nClient disconnected!\n";
+        client.Close();
     }
 
     // Close server socket
+    cout << "\nServer stopped!\n";
     server.Close();
     
     return 0;

