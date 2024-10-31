@@ -121,14 +121,21 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)env\include;$(SolutionDir)env\include\qt</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libcrypto.lib;libssl.lib;libcurl.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Qt5WebEngineWidgets_conda.lib;Qt5Core_conda.lib;Qt5Gui_conda.lib;Qt5Widgets_conda.lib;libcrypto.lib;libssl.lib;libcurl.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)env\lib</AdditionalLibraryDirectories>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
     </Link>
+    <PreBuildEvent>
+      <Command>"$(SolutionDir)env\bin\uic.exe" "$(ProjectDir)mainwindow.ui" -o "$(ProjectDir)ui_mainwindow.h"
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)mainwindow.h" -o "$(ProjectDir)moc_mainwindow.cpp"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -140,23 +147,41 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)env\include;$(SolutionDir)env\include\qt</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libcrypto.lib;libssl.lib;libcurl.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Qt5WebEngineWidgets_conda.lib;Qt5Core_conda.lib;Qt5Gui_conda.lib;Qt5Widgets_conda.lib;libcrypto.lib;libssl.lib;libcurl.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)env\lib</AdditionalLibraryDirectories>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
     </Link>
+    <PreBuildEvent>
+      <Command>"$(SolutionDir)env\bin\uic.exe" "$(ProjectDir)mainwindow.ui" -o "$(ProjectDir)ui_mainwindow.h"
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)mainwindow.h" -o "$(ProjectDir)moc_mainwindow.cpp"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="client.hpp" />
-    <ClInclude Include="gmailapi.hpp" />
+    <ClInclude Include="client.h" />
+    <ClInclude Include="gmailapi.h" />
+    <ClInclude Include="mainwindow.h" />
+    <ClInclude Include="ui_mainwindow.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="client.cpp" />
+    <ClCompile Include="gmailapi.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="mainwindow.cpp" />
+    <ClCompile Include="moc_mainwindow.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\credentials.json" />
+    <None Include="data\tokens.json" />
+    <None Include="mainwindow.ui" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,7 +1,8 @@
-data/
-bin/
-lib/
-include/
+env/
+moc_mainwindow.cpp
+ui_mainwindow.h
+credentials.json
+tokens.json
 screen.png
 webcam.png
 keylogger.txt

