@@ -16,7 +16,7 @@ string getFile(SOCKET& socket, const string& filePath) {
     // Open file to write received data
     ofstream file(filePath, ios::binary);
     if (!file.is_open()) {
-        oss << "Failed to open file: " << filePath << endl;
+        oss << "Failed to open file: " << filePath << ".";
         return oss.str();
     }
 
@@ -38,7 +38,6 @@ string handleMessage(const int port, const string& message, const string& ipAddr
     SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket == INVALID_SOCKET) {
         oss << "Failed to create socket: " << WSAGetLastError() << ".";
-        WSACleanup();
         return oss.str();
     }
 
@@ -52,13 +51,12 @@ string handleMessage(const int port, const string& message, const string& ipAddr
     if (connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         oss << "Failed to connect to server: " << WSAGetLastError() << ".";
         closesocket(clientSocket);
-        WSACleanup();
         return oss.str();
     }
     oss << "Connected to the server!";
 
     // Send message to server
-    send(clientSocket, message.c_str(), message.size() + 1, 0);
+    send(clientSocket, message.c_str(), static_cast<int>(message.size()) + 1, 0);
 
     // Receive message from server
     char buffer[BUFFER_SIZE] = { 0 };
@@ -80,10 +78,16 @@ string handleMessage(const int port, const string& message, const string& ipAddr
         }
     }
 
+    // Shutdown the connection
+    if (shutdown(clientSocket, SD_SEND) == SOCKET_ERROR) {
+        oss << "Failed to shutdown the connection: " << WSAGetLastError() << ".";
+        closesocket(clientSocket);
+        return oss.str();
+    }
+
     // Close socket
     oss << "Disconnected from the server!";
     closesocket(clientSocket);
-    WSACleanup();
 
     return oss.str();
 }

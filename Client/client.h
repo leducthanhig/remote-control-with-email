@@ -1,13 +1,13 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <iostream>
+#include <filesystem>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <filesystem>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
 
 #pragma comment(lib, "ws2_32.lib")
 
