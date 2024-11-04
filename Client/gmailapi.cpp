@@ -7,7 +7,7 @@ string base64Encode(const string& data) {
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
     bio = BIO_push(b64, bio);
 
-    BIO_write(bio, data.c_str(), data.length());
+    BIO_write(bio, data.c_str(), static_cast<int>(data.size()));
     BIO_flush(bio);
 
     char* encoded = nullptr;
