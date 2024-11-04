@@ -1,14 +1,18 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QtWebEngineWidgets/QWebEngineView>
-#include <QtWidgets/QStackedWidget>
-#include <QtWidgets/QMainWindow>
-#include <QtCore/QUrlQuery>
-#include <QtCore/QFile>
-#include "ui_mainwindow.h"
-#include "gmailapi.h"
 #include "client.h"
+#include "gmailapi.h"
+#include "ui_mainwindow.h"
+#include <QtCore/QFile>
+#include <QtCore/QTimer>
+#include <QtCore/QString>
+#include <QtCore/QUrlQuery>
+#include <QtCore/QStringList>
+#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QMainWindow>
+#include <QtWidgets/QStackedWidget>
+#include <QtWebEngineWidgets/QWebEngineView>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -21,19 +25,23 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    void login();
-
-private slots:
-    void logout();
-
 private:
     Ui::MainWindow *ui;
-    QWebEngineView* view;
+    QWebEngineView* webView;
     QStackedWidget* stackedWidget;
-    bool sleeping;
+    QTimer *timer;
+    int remaining;
+    bool stopped;
 
-    void startSession();
-    bool checkMailbox();
+    void login();
+    void setConnections();
+    void checkMailbox();
+    void addState(const string& msg);
+    void updateState();
+    void notifyError(const string& msg);
+    void warn(const string& msg);
+    void inform(const string& msg);
+    bool confirm(const string& msg);
 };
 
 #endif // MAINWINDOW_H
