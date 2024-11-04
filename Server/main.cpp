@@ -1,9 +1,6 @@
 #include "utils.h"
 
 int main() {
-    // Make this run in background
-    ShowWindow(GetConsoleWindow(), SW_HIDE);
-
     // Set up handlers
     map<string, map<string, function<void()>>> handlers = setupHandlers();
     
@@ -98,6 +95,6 @@ int main() {
     cout << "\nServer stopped!\n";
     server.ShutDown();
     server.Close();
-    
+
     return 0;
 }
