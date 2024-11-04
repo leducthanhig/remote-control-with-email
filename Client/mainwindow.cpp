@@ -237,6 +237,8 @@ void MainWindow::checkMailbox() {
         ostringstream oss;
         oss << "Error: " << e.what();
         notifyError(oss.str());
+        ui->textBrowser_status->append("Stopped!");
+        ui->pushButton_start->setVisible(1);
     }
 }
 
