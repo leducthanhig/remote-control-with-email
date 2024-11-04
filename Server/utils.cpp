@@ -16,8 +16,24 @@ map<string, map<string, function<void()>>> setupHandlers() {
         {
             "list", 
             {
-                { "app", listApps },
-                { "service", listServices }
+                { 
+                    "app", listApps 
+                },
+                { 
+                    "service", listServices 
+                },
+                {
+                    "dir",
+                    [] {
+                        string dirPath;
+                        inp.ignore(numeric_limits<streamsize>::max(), '"');
+                        getline(inp, dirPath, '"');
+                        if (dirPath == "") {
+                            throw invalid_argument("Missing argument: dirPath cannot be empty");
+                        }
+                        listDir(dirPath);
+                    }
+                }
             }
         },
         {
@@ -99,7 +115,8 @@ map<string, map<string, function<void()>>> setupHandlers() {
                 {
                     "get",
                     [] {
-                        inp >> requestFilePath;
+                        inp.ignore(numeric_limits<streamsize>::max(), '"');
+                        getline(inp, requestFilePath, '"');
                         if (requestFilePath == "") {
                             throw invalid_argument("Missing argument: filePath cannot be empty");
                         }
@@ -110,7 +127,10 @@ map<string, map<string, function<void()>>> setupHandlers() {
                     "copy",
                     [] {
                         string srcPath, desPath;
-                        inp >> srcPath >> desPath;
+                        inp.ignore(numeric_limits<streamsize>::max(), '"');
+                        getline(inp, srcPath, '"');
+                        inp.ignore(numeric_limits<streamsize>::max(), '"');
+                        getline(inp, desPath, '"');
                         if (srcPath == "" || desPath == "") {
                             throw invalid_argument("Missing argument: srcPath or desPath cannot be empty");
                         }
@@ -121,7 +141,8 @@ map<string, map<string, function<void()>>> setupHandlers() {
                     "delete",
                     [] {
                         string filePath;
-                        inp >> filePath;
+                        inp.ignore(numeric_limits<streamsize>::max(), '"');
+                        getline(inp, filePath, '"');
                         if (filePath == "") {
                             throw invalid_argument("Missing argument: filePath cannot be empty");
                         }
@@ -159,7 +180,7 @@ map<string, map<string, function<void()>>> setupHandlers() {
 
 void getInstruction() {
     out << "Usages:\n\n"
-        << "\tlist\t[app|service]\n"
+        << "\tlist\t[app|service|dir]\t[dirPath]\n"
         << "\tstart\t[app|service]\t\t[appPath|serviceName]\n"
         << "\tstop\t[app|service]\t\t[processID|serviceName]\n"
         << "\tpower\t[shutdown|restart]\n"
@@ -184,6 +205,26 @@ string getFileName(const string& filePath) {
         pos = (pos1 > pos2) ? pos1 : pos2;
     }
     return filePath.substr(pos + 1);
+}
+
+void listDir(const string& dirPath) {
+    string searchPath = dirPath + "\\*";
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = FindFirstFileW(wstring(searchPath.begin(), searchPath.end()).c_str(), &findFileData);
+    
+    if (hFind == INVALID_HANDLE_VALUE) {
+        throw runtime_error("Failed to get directory informations");
+    }
+    
+    do {
+        const wstring fileOrDir = findFileData.cFileName;
+        if (fileOrDir != L"." && fileOrDir != L"..") {
+            out << string(fileOrDir.begin(), fileOrDir.end()) << endl;
+        }
+    }
+    while (FindNextFileW(hFind, &findFileData));
+    
+    FindClose(hFind);
 }
 
 // Function to get the main window handle of a process
@@ -271,7 +312,7 @@ void listServices() {
 
     out << "" << setw(31) << right << "Service Name" << setw(22) << " | " << setw(57) << "Display Name" << setw(54) << " |  Status\n";
     out << string(51, '-') << "o" << string(102, '-') << "o" << string(10, '-') << endl;
-    for (DWORD i = 0; i < servicesCount; ++i) {
+    for (DWORD i = 0; i < servicesCount; i++) {
         wstring serviceName(serviceStatus[i].lpServiceName), displayName(serviceStatus[i].lpDisplayName);
         out << setw(50) << left << string(serviceName.begin(), serviceName.end()) << " | " 
             << setw(100) << string(displayName.begin(), displayName.end()) << " | " 
