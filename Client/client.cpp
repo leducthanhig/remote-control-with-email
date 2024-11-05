@@ -70,7 +70,8 @@ string handleMessage(const int port, const string& message, const string& ipAddr
             // Check for "See more in file" and retrieve file if found
             size_t pos = receivedMessage.find("See more in file");
             if (pos != string::npos) {
-                string filePath = filesystem::current_path().string() + "/" + receivedMessage.substr(pos + 17);
+                string filePath = filesystem::current_path().string() + "/received_" + receivedMessage.substr(pos + 17);
+                receivedMessage.replace(receivedMessage.begin() + pos + 12, receivedMessage.end(), "the attachment file.");
                 receivedFilePath = getFile(clientSocket, filePath);
                 break;
             }
