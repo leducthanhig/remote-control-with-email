@@ -31,7 +31,7 @@ string getFile(SOCKET& socket, const string& filePath) {
     return filePath;
 }
 
-string handleMessage(const int port, const string& message, const string& ipAddress, string& receivedMessage, string& receivedFilePath) {
+string handleMessage(const int port, const string& message, const string& ipAddress) {
     ostringstream oss;
     
     // Create socket
@@ -53,12 +53,12 @@ string handleMessage(const int port, const string& message, const string& ipAddr
         closesocket(clientSocket);
         return oss.str();
     }
-    oss << "Connected to the server!";
 
     // Send message to server
     send(clientSocket, message.c_str(), static_cast<int>(message.size()) + 1, 0);
 
     // Receive message from server
+    string receivedMessage, receivedFilePath;
     char buffer[BUFFER_SIZE] = { 0 };
     int bytesReceived;
     bool checked = 0;
@@ -87,8 +87,7 @@ string handleMessage(const int port, const string& message, const string& ipAddr
     }
 
     // Close socket
-    oss << "Disconnected from the server!";
     closesocket(clientSocket);
 
-    return oss.str();
+    return receivedMessage + "\nreceivedFilePath=" + receivedFilePath;
 }

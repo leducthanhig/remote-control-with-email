@@ -18,6 +18,6 @@ using namespace std;
 
 string WSAInitiate();
 string getFile(SOCKET& socket, const string& filePath);
-string handleMessage(const int port, const string& message, const string& ipAddress, string& receivedMessage, string& receivedFilePath);
+string handleMessage(const int port, const string& message, const string& ipAddress);
 
 #endif // CLIENT_H
