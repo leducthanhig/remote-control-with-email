@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{e3fc005c-7785-4960-9ee3-ea4900d99d39}</ProjectGuid>
+    <ProjectGuid>{B40C0B23-9D39-40C6-AF16-F1D4DEF60A22}</ProjectGuid>
     <RootNamespace>Client</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -126,7 +126,8 @@
     </Link>
     <PreBuildEvent>
       <Command>"$(SolutionDir)env\bin\uic.exe" "$(ProjectDir)mainwindow.ui" -o "$(ProjectDir)ui_mainwindow.h"
-"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)mainwindow.h" -o "$(ProjectDir)moc_mainwindow.cpp"</Command>
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)mainwindow.h" -o "$(ProjectDir)moc_mainwindow.cpp"
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)worker.h" -o "$(ProjectDir)moc_worker.cpp"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -144,7 +145,8 @@
     </Link>
     <PreBuildEvent>
       <Command>"$(SolutionDir)env\bin\uic.exe" "$(ProjectDir)mainwindow.ui" -o "$(ProjectDir)ui_mainwindow.h"
-"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)mainwindow.h" -o "$(ProjectDir)moc_mainwindow.cpp"</Command>
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)mainwindow.h" -o "$(ProjectDir)moc_mainwindow.cpp"
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)worker.h" -o "$(ProjectDir)moc_worker.cpp"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -152,6 +154,7 @@
     <ClInclude Include="gmailapi.h" />
     <ClInclude Include="mainwindow.h" />
     <ClInclude Include="ui_mainwindow.h" />
+    <ClInclude Include="worker.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="client.cpp" />
@@ -159,6 +162,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mainwindow.cpp" />
     <ClCompile Include="moc_mainwindow.cpp" />
+    <ClCompile Include="moc_worker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="data\credentials.json" />

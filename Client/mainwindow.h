@@ -1,11 +1,13 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "worker.h"
 #include "client.h"
 #include "gmailapi.h"
 #include "ui_mainwindow.h"
 #include <QtCore/QFile>
 #include <QtCore/QTimer>
+#include <QtCore/QThread>
 #include <QtCore/QString>
 #include <QtCore/QUrlQuery>
 #include <QtCore/QStringList>
@@ -29,13 +31,16 @@ private:
     Ui::MainWindow *ui;
     QWebEngineView* webView;
     QStackedWidget* stackedWidget;
-    QTimer *timer;
-    int remaining;
+    QTimer *timer, *waitingTimer;
+    QThread* workerThread;
+    Worker* worker;
+    int remaining, waiting;
     bool stopped;
 
+    void startBackgroundTask(function<string()> fetchFunction, function<void(const string&)> callbackFunction);
     void login();
     void setConnections();
-    void checkMailbox();
+    void startSession();
     void addState(const string& msg);
     void updateState();
     void notifyError(const string& msg);
