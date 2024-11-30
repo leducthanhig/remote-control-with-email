@@ -1,9 +1,6 @@
 #include "utils.h"
 
 int main() {
-    // Set up handlers
-    map<string, map<string, function<void()>>> handlers = setupHandlers();
-    
     // Init socket
     if (!AfxSocketInit()) {
         cerr << "\nFailed to initialize sockets. Error: " << GetLastError() << endl;

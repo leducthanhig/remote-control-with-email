@@ -2,14 +2,10 @@ env/
 moc_worker.cpp
 moc_mainwindow.cpp
 ui_mainwindow.h
-credentials.json
-tokens.json
-screen.png
-webcam.png
-keylogger.txt
-received_screen.png
-received_webcam.png
-received_keylogger.txt
+*.json
+*.txt
+*.png
+*.zip
 
 # User-specific files
 *.user

