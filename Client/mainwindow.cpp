@@ -44,7 +44,7 @@ MainWindow::~MainWindow() {
     // Clean up socket
     WSACleanup();
 
-    // Delocate pointers
+    // Deallocate pointers
     delete ui;
     delete worker;
 

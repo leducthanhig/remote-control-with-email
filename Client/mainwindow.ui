@@ -347,11 +347,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <x>0</x>
         <y>0</y>
         <width>581</width>
-        <height>361</height>
+        <height>371</height>
        </rect>
       </property>
       <property name="text">
-       <string>Created by Students of HCMUS
+       <string>Developed by Students of HCMUS
 
 Le Duc Thanh
 Nguyen Viet Cuong

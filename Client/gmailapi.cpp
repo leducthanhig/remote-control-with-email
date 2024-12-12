@@ -81,7 +81,7 @@ string refreshAccessToken() {
         client_secret = credentials["client_secret"],
         refresh_token = tokens["refresh_token"],
         reqBody = "client_id=" + client_id + "&client_secret=" + client_secret
-        + "&refresh_token=" + refresh_token + "&grant_type=refresh_token";
+                + "&refresh_token=" + refresh_token + "&grant_type=refresh_token";
 
     // Send a post request to Google API
     string response = sendHttpReq(url, {}, reqBody, "POST");
@@ -212,31 +212,16 @@ string sendMail(const string& to, const string& from, const string& subject, con
 
     // Add attachment (if any)
     if (filePath.size()) {
-        string fileName = filePath.substr(filePath.find_last_of('/') + 1);
-        if (filePath.find(".txt") + 4 == filePath.size()) {
-            // Add text file attachment
-            emailStream << "Content-Type: text/plain; name=\"" << fileName << "\"\r\n"
-                << "Content-Disposition: attachment; filename=\"" << fileName << "\"\r\n"
-                << "Content-Transfer-Encoding: base64\r\n"
-                << "\r\n";
+        string fileName = filePath.substr(filePath.find_last_of('\\') + 1);
+        emailStream << "Content-Type: text/plain; name=\"" << fileName << "\"\r\n"
+            << "Content-Disposition: attachment; filename=\"" << fileName << "\"\r\n"
+            << "Content-Transfer-Encoding: base64\r\n"
+            << "\r\n";
 
-            ifstream textFile(filePath, ios::binary);
-            ostringstream textData;
-            textData << textFile.rdbuf();
-            emailStream << base64Encode(textData.str()) << "\r\n--boundary_string\r\n";
-        }
-        else {
-            // Add image file attachment
-            emailStream << "Content-Type: image/png; name=\"" << fileName << "\"\r\n"
-                << "Content-Disposition: attachment; filename=\"" << fileName << "\"\r\n"
-                << "Content-Transfer-Encoding: base64\r\n"
-                << "\r\n";
-
-            ifstream imageFile(filePath, ios::binary);
-            ostringstream imageData;
-            imageData << imageFile.rdbuf();
-            emailStream << base64Encode(imageData.str()) << "\r\n--boundary_string--";
-        }
+        ifstream textFile(filePath, ios::binary);
+        ostringstream textData;
+        textData << textFile.rdbuf();
+        emailStream << base64Encode(textData.str()) << "\r\n--boundary_string\r\n";
     }
 
     // Send mail
