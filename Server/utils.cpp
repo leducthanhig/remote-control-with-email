@@ -357,12 +357,11 @@ void listServices() {
         throw runtime_error("EnumServicesStatus failed with error: " + to_string(GetLastError()));
     }
 
-    out << "" << setw(31) << right << "Service Name" << setw(22) << " | " << setw(57) << "Display Name" << setw(54) << " |  Status\n";
-    out << string(51, '-') << "o" << string(102, '-') << "o" << string(10, '-') << endl;
+    out << "" << setw(31) << right << "Service Name" << setw(22) << " |  Status\n";
+    out << string(51, '-') << "o" << string(10, '-') << endl;
     for (DWORD i = 0; i < servicesCount; i++) {
         wstring serviceName(serviceStatus[i].lpServiceName), displayName(serviceStatus[i].lpDisplayName);
         out << setw(50) << left << string(serviceName.begin(), serviceName.end()) << " | " 
-            << setw(100) << string(displayName.begin(), displayName.end()) << " | " 
             << (serviceStatus[i].ServiceStatus.dwCurrentState == SERVICE_RUNNING ? "Running" : "Stopped") << endl;
     }
     
