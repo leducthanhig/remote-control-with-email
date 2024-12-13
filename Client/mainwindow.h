@@ -10,7 +10,7 @@
 #include <QtCore/QThread>
 #include <QtCore/QString>
 #include <QtCore/QUrlQuery>
-#include <QtCore/QStringList>
+#include <QtGui/QCloseEvent>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QStackedWidget>
@@ -38,6 +38,7 @@ private:
     bool stopped;
 
     void startBackgroundTask(function<string()> fetchFunction, function<void(const string&)> callbackFunction);
+    void closeEvent(QCloseEvent* event);
     void login();
     void setConnections();
     void startSession();

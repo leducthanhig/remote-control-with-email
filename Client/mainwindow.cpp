@@ -371,3 +371,12 @@ void MainWindow::startBackgroundTask(function<string()> fetchFunction, function<
     }
     workerThread->start();
 }
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+    if (confirm("exit")) {
+        event->accept();
+    }
+    else {
+        event->ignore();
+    }
+}
