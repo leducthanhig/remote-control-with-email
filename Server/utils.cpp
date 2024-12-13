@@ -241,7 +241,18 @@ void getInstruction() {
 }
 
 string getFileName(const string& filePath) {
-    return filePath.substr(filePath.find_last_of('\\') + 1);
+    size_t pos1 = filePath.find_last_of('/'), pos2 = filePath.find_last_of('\\');
+    size_t pos;
+    if (pos1 == string::npos) {
+        pos = pos2;
+    }
+    else if (pos2 == string::npos) {
+        pos = pos1;
+    }
+    else {
+        pos = (pos1 > pos2) ? pos1 : pos2;
+    }
+    return filePath.substr(pos + 1);
 }
 
 void listDir(const string& dirPath) {
