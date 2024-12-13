@@ -1,3 +1,4 @@
+*Setup/
 env/
 moc_worker.cpp
 moc_mainwindow.cpp

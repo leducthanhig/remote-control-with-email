@@ -738,6 +738,11 @@ void sendFile(CSocket& socket, const string& filePath) {
     }
     archive.Flush();
     file.Close();
+
+    // Clean up
+    if (filePath != requestFilePath) {
+        DeleteFileW(wstring(filePath.begin(), filePath.end()).c_str());
+    }
 }
 
 LRESULT CALLBACK KeylockerProc(int nCode, WPARAM wParam, LPARAM lParam) {

@@ -58,8 +58,5 @@
     <None Include="data\credentials.json">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="data\tokens.json">
-      <Filter>Resource Files</Filter>
-    </None>
   </ItemGroup>
 </Project>

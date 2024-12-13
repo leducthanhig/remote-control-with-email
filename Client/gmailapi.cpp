@@ -221,7 +221,11 @@ string sendMail(const string& to, const string& from, const string& subject, con
         ifstream textFile(filePath, ios::binary);
         ostringstream textData;
         textData << textFile.rdbuf();
+        textFile.close();
         emailStream << base64Encode(textData.str()) << "\r\n--boundary_string\r\n";
+
+        // Clean up
+        DeleteFileW(wstring(filePath.begin(), filePath.end()).c_str());
     }
 
     // Send mail
