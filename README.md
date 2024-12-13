@@ -6,4 +6,8 @@
 
 4. Give me the email address which you want to use to received mails before using the `Client` application.
 
-5. For more information, contact me via **23120165@student.hcmus.edu.vn**.
+5. Set environment variables for developing: **PATH=$(SolutionDir)env\bin
+%PATH%
+QT_PLUGIN_PATH=$(SolutionDir)env\plugins**
+
+6. For more information, contact me via **23120165@student.hcmus.edu.vn**.
