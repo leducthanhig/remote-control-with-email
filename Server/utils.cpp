@@ -226,18 +226,51 @@ unordered_map<string, unordered_map<string, function<void()>>> handlers = {
 };
 
 void getInstruction() {
-    out << "Usages:\n\n"
-        << "\tlist\t[app|service|dir]\t[dirPath]\n"
-        << "\tstart\t[app|service]\t\t[appPath|serviceName]\n"
-        << "\tstop\t[app|service]\t\t[processID|serviceName]\n"
-        << "\tpower\t[shutdown|restart]\n"
-        << "\tfile\t[get|copy|delete]\tsrcPath\t[desPath]\n"
-        << "\tcapture\t[camera|screen]\n"
-        << "\tstart\t[camera|keylogger]\n"
-        << "\tstop\t[camera|keylogger]\n"
-        << "\t[un]lock\tkeyboard\n"
-        << "\thelp\n"
-        << "\texit\n";
+    vector<vector<string>> data = {
+        {"list",    "[app|service|dir]",    "[dirPath]"},
+        {"start",   "[app|service]",        "[appPath|serviceName]"},
+        {"stop",    "[app|service]",        "[processID|serviceName]"},
+        {"power",   "[shutdown|restart]"},
+        {"file",    "[get|copy|delete]",    "srcPath\t\t[desPath]"},
+        {"capture", "[camera|screen]"},
+        {"start",   "[camera|keylogger]"},
+        {"stop",    "[camera|keylogger]"},
+        {"[un]lock", "keyboard"},
+        {"help"},
+        {"exit"}
+    };
+    out << "Usages:\n" << drawTable({}, data);
+}
+
+string drawTable(const vector<string>& headers, const vector<vector<string>>& rowData) {
+    string html = R"(<table>
+    <style>
+        th {
+            border-bottom: 1px solid;
+        }
+        td {
+            padding: 0px 10px;
+        }
+    </style>
+    )";
+    
+    html += "\t<tr>\n";
+    for (const string& header : headers) {
+        html += "\t\t<th>" + header + "</th>\n";
+    }
+    html += "\t</tr>\n";
+
+    for (const auto& row : rowData) {
+        html += "\t<tr>\n";
+        for (const string& data : row) {
+            html += "\t\t<td>" + data + "</td>\n";
+        }
+        html += "\t</tr>\n";
+    }
+
+    html += "</table>\n";
+    
+    return html;
 }
 
 string getFileName(const string& filePath) {
@@ -300,17 +333,18 @@ void listApps() {
         throw runtime_error("Failed to list processes");
     }
     
-    out << " Process ID | " << setw(26) << right << "Executable\n";
-    out << string(12, '-') << "o" << string(40, '-') << endl;
+    vector<string> headers = { "Process ID", "Executable" };
+    vector<vector<string>> data;
     do {
         HWND hwnd = GetMainWindowHandle(entry.th32ProcessID);
         if (hwnd) {
             wstring executeFileName(entry.szExeFile);
-            out << setw(11) << right << entry.th32ProcessID << " | " 
-                << string(executeFileName.begin(), executeFileName.end()) << endl;
+            data.push_back({ to_string(entry.th32ProcessID), string(executeFileName.begin(), executeFileName.end()) });
             CloseWindow(hwnd);
         }
     } while (Process32NextW(snapshot, &entry));
+    out << drawTable(headers, data);
+
     CloseHandle(snapshot);
 }
 
@@ -357,13 +391,16 @@ void listServices() {
         throw runtime_error("EnumServicesStatus failed with error: " + to_string(GetLastError()));
     }
 
-    out << "" << setw(31) << right << "Service Name" << setw(22) << " |  Status\n";
-    out << string(51, '-') << "o" << string(10, '-') << endl;
+    vector<string> headers = { "Service Name" , "Status" };
+    vector<vector<string>> data;
     for (DWORD i = 0; i < servicesCount; i++) {
         wstring serviceName(serviceStatus[i].lpServiceName), displayName(serviceStatus[i].lpDisplayName);
-        out << setw(50) << left << string(serviceName.begin(), serviceName.end()) << " | " 
-            << (serviceStatus[i].ServiceStatus.dwCurrentState == SERVICE_RUNNING ? "Running" : "Stopped") << endl;
+        data.push_back({ 
+            string(serviceName.begin(), serviceName.end()), 
+            (serviceStatus[i].ServiceStatus.dwCurrentState == SERVICE_RUNNING ? "Running" : "Stopped") 
+        });
     }
+    out << drawTable(headers, data);
     
     CloseServiceHandle(scmHandle);
 }

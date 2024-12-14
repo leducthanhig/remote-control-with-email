@@ -29,6 +29,7 @@ extern stringstream inp, out;
 extern string webcamCapturePath, keyloggerCapturePath, screenCapturePath, requestFilePath;
 extern unordered_map<string, unordered_map<string, function<void()>>> handlers;
 
+string drawTable(const vector<string>& headers, const vector<vector<string>>& rowData);
 string getFileName(const string& filePath);
 void getInstruction();
 void listDir(const string& dirPath);

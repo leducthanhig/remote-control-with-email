@@ -206,7 +206,7 @@ string sendMail(const string& to, const string& from, const string& subject, con
         << "\r\n--boundary_string\r\n";
 
     // Add email body
-    emailStream << "Content-Type: text/plain; charset=\"UTF-8\"\r\n"
+    emailStream << "Content-Type: text/html; charset=\"UTF-8\"\r\n"
         << "\r\n" << messageBody << "\r\n"
         << "\r\n--boundary_string\r\n";
 
