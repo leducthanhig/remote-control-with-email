@@ -142,7 +142,9 @@
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)env\bin\uic.exe" "$(ProjectDir)mainwindow.ui" -o "$(ProjectDir)ui_mainwindow.h"</Command>
+      <Command>"$(SolutionDir)env\bin\uic.exe" "$(ProjectDir)mainwindow.ui" -o "$(ProjectDir)ui_mainwindow.h"
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)mainwindow.h" -o "$(ProjectDir)moc_mainwindow.cpp"
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)worker.h" -o "$(ProjectDir)moc_worker.cpp"</Command>
     </PreBuildEvent>
     <Manifest />
   </ItemDefinitionGroup>
