@@ -239,10 +239,10 @@ void getInstruction() {
         {"help"},
         {"exit"}
     };
-    out << "Usages:\n" << drawTable({}, data);
+    out << "<p>Usages:</p>" << drawTable(data);
 }
 
-string drawTable(const vector<string>& headers, const vector<vector<string>>& rowData) {
+string drawTable(const vector<vector<string>>& rowData, const vector<string>& headers) {
     string html = R"(<table>
     <style>
         th {
@@ -297,13 +297,17 @@ void listDir(const string& dirPath) {
         throw runtime_error("Failed to get directory informations");
     }
     
+    vector<vector<string>> data;
     do {
-        wstring fileOrDir = findFileData.cFileName;
-        if (fileOrDir != L"." && fileOrDir != L"..") {
-            out << string(fileOrDir.begin(), fileOrDir.end()) << endl;
+        wstring fileName = findFileData.cFileName;
+        bool isDir = (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+        if (fileName != L"." && fileName != L"..") {
+            data.push_back({ string(fileName.begin(), fileName.end()) + (isDir ? "/" : "")});
         }
     }
     while (FindNextFileW(hFind, &findFileData));
+
+    out << drawTable(data);
     
     FindClose(hFind);
 }
@@ -343,7 +347,7 @@ void listApps() {
             CloseWindow(hwnd);
         }
     } while (Process32NextW(snapshot, &entry));
-    out << drawTable(headers, data);
+    out << drawTable(data, headers);
 
     CloseHandle(snapshot);
 }
@@ -400,7 +404,7 @@ void listServices() {
             (serviceStatus[i].ServiceStatus.dwCurrentState == SERVICE_RUNNING ? "Running" : "Stopped") 
         });
     }
-    out << drawTable(headers, data);
+    out << drawTable(data, headers);
     
     CloseServiceHandle(scmHandle);
 }
