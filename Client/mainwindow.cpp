@@ -203,6 +203,10 @@ void MainWindow::startSession() {
             return getMailList("from:" + ui->lineEdit_acceptAddress->text().toStdString() + "%20is:unread");
         },
         [this](const string& res) {
+            if (res.find("connection") != string::npos) {
+                notifyError(res);
+                return;
+            }
             if (res.find("error") != string::npos) {
                 notifyError("Failed to get mail list");
                 return;
@@ -253,10 +257,6 @@ void MainWindow::startSession() {
                                         return handleMessage(ui->spinBox_port->value(), subject, body);
                                     },
                                     [this, subject](const string& res) {
-                                        if (res.find("Failed") != string::npos) {
-                                            notifyError("Failed to handle request");
-                                            return;
-                                        }
                                         updateState();
 
                                         size_t pos = res.find("\nreceivedFilePath=");

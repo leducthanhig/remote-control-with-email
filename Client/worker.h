@@ -15,7 +15,13 @@ public:
 public slots:
     void startTask() {
         if (task) {
-            std::string result = task();
+            std::string result;
+            try {
+                result = task();
+            }
+            catch (const std::exception& e) {
+                result = e.what();
+            }
             emit taskFinished(QString::fromStdString(result));
         }
     }
