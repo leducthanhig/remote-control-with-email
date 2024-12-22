@@ -85,9 +85,14 @@ string refreshAccessToken() {
 
     // Send a post request to Google API
     string response = sendHttpReq(url, {}, reqBody, "POST");
+    json response_json = json::parse(response);
+
+    // Check if the refresh token expired
+    if (response_json.contains("error")) {
+        return "error";
+    }
 
     // Add timestamp and refresh token to the response data
-    json response_json = json::parse(response);
     response_json["timestamp"] = time(0);
     response_json["refresh_token"] = refresh_token;
 
@@ -102,17 +107,16 @@ string refreshAccessToken() {
 string getAccessToken(const string& authorizationCode) {
     // Check if the file that contains token informations exist
     ifstream fi(TOKENS_PATH);
-    if (fi.is_open()) {
+    if (fi.is_open() && !authorizationCode.size()) {
         json tokens = json::parse(fi);
-        fi.close();
 
         // Check if the access token is expired
-        if (tokens["expires_in"] - (time(0) - tokens["timestamp"]) > 10) {
-            return tokens["access_token"];
+        if (tokens["expires_in"] - (time(0) - tokens["timestamp"]) < 10) {
+            return refreshAccessToken();
         }
-        string accessToken = refreshAccessToken();
-        if (accessToken != "") return accessToken;
+        return tokens["access_token"];
     }
+    fi.close();
 
     // Get credential information from file
     fi.open(CREDENTIALS_PATH);
@@ -158,29 +162,9 @@ string trashMail(const string& id) {
 }
 
 string getUserEmailAddress() {
-    // Get token informations from file
-    ifstream tokensFile(TOKENS_PATH);
-    json tokens = json::parse(tokensFile);
-    tokensFile.close();
-    
-    // Check if the account name is in the token file
-    if (tokens.find("account") == tokens.end()) {
-        // Get user email address from Gmail API
-        json response_json = json::parse(sendHttpReq(GOOGLEAPI_GMAIL_PROFILE_URL, { "Authorization: Bearer " + getAccessToken() }));
-        
-        // Add user email address to token informations
-        tokens["account"] = response_json["emailAddress"];
-        
-        // Save the updated information to file
-        ofstream tokensFile(TOKENS_PATH);
-        tokensFile << tokens.dump(4);
-        tokensFile.close();
-        
-        return response_json["emailAddress"];
-    }
-    else {
-        return tokens["account"];
-    }
+    string accessToken = getAccessToken();
+    if (accessToken == "error") return "error";
+    return json::parse(sendHttpReq(GOOGLEAPI_GMAIL_PROFILE_URL, { "Authorization: Bearer " + accessToken }))["emailAddress"];
 }
 
 string getMailSubject(const json& message) {

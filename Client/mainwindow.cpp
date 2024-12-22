@@ -55,56 +55,55 @@ MainWindow::~MainWindow() {
 
 void MainWindow::login() {
     // Check if token informations exist
-    ifstream tokensFile(TOKENS_PATH);
-    if (!tokensFile.is_open()) {
-        // Get credential informations from file
-        ifstream fi(CREDENTIALS_PATH);
-        json credentials = json::parse(fi)["installed"];
-        fi.close();
+    if (QFile::exists(TOKENS_PATH)) {
+        string emailAddress = getUserEmailAddress();
+        if (emailAddress != "error") {
+            ui->label_account_info->setText(QString::fromStdString(emailAddress));
+            return;
+        }
+    }
+    
+    // Get credential informations from file
+    ifstream fi(CREDENTIALS_PATH);
+    json credentials = json::parse(fi)["installed"];
+    fi.close();
 
-        // Create authorization url
-        QString authUrl = QString("%1?client_id=%2&redirect_uri=%3&response_type=code&scope=%4").arg(
-            QString::fromStdString(credentials["auth_uri"].get<string>()),
-            QString::fromStdString(credentials["client_id"].get<string>()),
-            QString::fromStdString(credentials["redirect_uris"][0].get<string>()),
-            GOOGLEAPI_AUTH_SCOPE_URL
-        );
+    // Create authorization url
+    QString authUrl = QString("%1?client_id=%2&redirect_uri=%3&response_type=code&scope=%4").arg(
+        QString::fromStdString(credentials["auth_uri"].get<string>()),
+        QString::fromStdString(credentials["client_id"].get<string>()),
+        QString::fromStdString(credentials["redirect_uris"][0].get<string>()),
+        GOOGLEAPI_AUTH_SCOPE_URL
+    );
 
-        // Open the url in the internal browser
-        webView->setUrl(QUrl(authUrl));
+    // Open the url in the internal browser
+    webView->setUrl(QUrl(authUrl));
 
-        // Change the central widget to the browser
-        stackedWidget->setCurrentIndex(1);
+    // Change the central widget to the browser
+    stackedWidget->setCurrentIndex(1);
 
-        // Connect to slot for getting authorization code
-        connect(webView, &QWebEngineView::urlChanged, this, [this, credentials](const QUrl& url) {
-            if (url.toString().startsWith(QString::fromStdString(credentials["redirect_uris"][0].get<string>()))) {
-                // Extract the code
-                QUrlQuery query(url);
-                QString code = query.queryItemValue("code");
-                if (!code.isEmpty()) {
-                    if (webView) {
-                        // Close the browser
-                        webView->close();
+    // Connect to slot for getting authorization code
+    connect(webView, &QWebEngineView::urlChanged, this, [this, credentials](const QUrl& url) {
+        if (url.toString().startsWith(QString::fromStdString(credentials["redirect_uris"][0].get<string>()))) {
+            // Extract the code
+            QUrlQuery query(url);
+            QString code = query.queryItemValue("code");
+            if (!code.isEmpty()) {
+                if (webView) {
+                    // Close the browser
+                    webView->close();
 
-                        // Turn back to the initial view
-                        stackedWidget->setCurrentIndex(0);
-                    }
-                    // Get token informations by using the extracted code
-                    getAccessToken(code.toStdString());
-
-                    // Get and display the current user account
-                    ui->label_account_info->setText(QString::fromStdString(getUserEmailAddress()));
+                    // Turn back to the initial view
+                    stackedWidget->setCurrentIndex(0);
                 }
+                // Get token informations by using the extracted code
+                getAccessToken(code.toStdString());
+
+                // Get and display the current user account
+                ui->label_account_info->setText(QString::fromStdString(getUserEmailAddress()));
             }
-        });
-        
-        tokensFile.close();
-    }
-    else {
-        // Get and display the current user account
-        ui->label_account_info->setText(QString::fromStdString(getUserEmailAddress()));
-    }
+        }
+    });
 }
 
 void MainWindow::setConnections() {
@@ -265,8 +264,8 @@ void MainWindow::startSession() {
                                         // Send back to the sender the server message
                                         addState("Sending the result back to the mail sender");
                                         startBackgroundTask(
-                                            [this, receivedMessage, receivedFilePath]() {
-                                                return sendMail(ui->lineEdit_acceptAddress->text().toStdString(), getUserEmailAddress(), "Server response", receivedMessage, receivedFilePath);
+                                            [this, subject, receivedMessage, receivedFilePath]() {
+                                                return sendMail(ui->lineEdit_acceptAddress->text().toStdString(), getUserEmailAddress(), "Server response for [" + subject + "]", receivedMessage, receivedFilePath);
                                             },
                                             [this, subject](const string& res) {
                                                 if (res.find("error") != string::npos) {
