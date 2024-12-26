@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "utils.hpp"
 
 stringstream inp, out;
 string requestFilePath;
@@ -764,26 +764,35 @@ void stopCamera() {
     out << "Webcam closed successfully.\n\nSee more in file " << getFileName(webcamCapturePath);
 }
 
-void sendFile(CSocket& socket, const string& filePath) {
-    CFile file;
-    if (!file.Open(wstring(filePath.begin(), filePath.end()).c_str(), CFile::modeRead)) {
+void sendFile(SOCKET& socket, const string& filePath) {
+    // Open the file for reading
+    ifstream file(filePath, ios::binary);
+    if (!file.is_open()) {
         throw runtime_error("Failed to open file for reading");
     }
-    
-    CSocketFile socketFile(&socket);
-    CArchive archive(&socketFile, CArchive::store);
 
     char buffer[BUFFER_SIZE];
-    UINT bytesRead;
-    while ((bytesRead = file.Read(buffer, sizeof(buffer)))) {
-        archive.Write(buffer, bytesRead);
+
+    // Read and send the file in chunks
+    while (!file.eof()) {
+        file.read(buffer, BUFFER_SIZE);
+        streamsize bytesRead = file.gcount();
+        if (bytesRead > 0) {
+            int bytesSent = send(socket, buffer, static_cast<int>(bytesRead), 0);
+            if (bytesSent == SOCKET_ERROR) {
+                file.close();
+                throw runtime_error("Failed to send data over the socket");
+            }
+        }
     }
-    archive.Flush();
-    file.Close();
+
+    file.close();
 
     // Clean up
     if (filePath != requestFilePath) {
-        DeleteFileW(wstring(filePath.begin(), filePath.end()).c_str());
+        if (!DeleteFileA(filePath.c_str())) {
+            throw runtime_error("Failed to delete the temporary file");
+        }
     }
 }
 

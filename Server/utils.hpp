@@ -1,5 +1,7 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef UTILS_HPP
+#define UTILS_HPP
+
+#define WIN32_LEAN_AND_MEAN
 
 #include <vector>
 #include <string>
@@ -13,15 +15,18 @@
 #include <functional>
 #include <filesystem>
 #include <unordered_map>
-#include <afxsock.h>
 #include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <tlhelp32.h>
 #include <opencv2/opencv.hpp>
+
+#pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
 using namespace cv;
 
-#define PORT 8080
+#define PORT "8080"
 #define BUFFER_SIZE 2048
 #define SHUTDOWN_DELAY 15
 
@@ -51,6 +56,6 @@ void lockKeyboard();
 void unlockKeyboard();
 void deleteFile(LPCWSTR filePath);
 void copyFile(LPCWSTR src, LPCWSTR dst);
-void sendFile(CSocket& socket, const string& filePath);
+void sendFile(SOCKET& socket, const string& filePath);
 
-#endif
+#endif // UTILS_HPP
