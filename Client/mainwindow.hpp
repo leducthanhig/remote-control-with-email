@@ -1,10 +1,10 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef MAINWINDOW_HPP
+#define MAINWINDOW_HPP
 
-#include "worker.h"
-#include "client.h"
-#include "gmailapi.h"
-#include "ui_mainwindow.h"
+#include "worker.hpp"
+#include "client.hpp"
+#include "gmailapi.hpp"
+#include "ui_mainwindow.hpp"
 #include <QtCore/QFile>
 #include <QtCore/QTimer>
 #include <QtCore/QThread>
@@ -50,4 +50,4 @@ private:
     bool confirm(const string& msg);
 };
 
-#endif // MAINWINDOW_H
+#endif // MAINWINDOW_HPP

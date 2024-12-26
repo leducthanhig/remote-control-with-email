@@ -1,5 +1,5 @@
-#ifndef CLIENT_H
-#define CLIENT_H
+#ifndef CLIENT_HPP
+#define CLIENT_HPP
 
 #include <string>
 #include <sstream>
@@ -20,4 +20,4 @@ string WSAInitiate();
 string getFile(SOCKET& socket, const string& filePath);
 string handleMessage(const int port, const string& message, const string& ipAddress);
 
-#endif // CLIENT_H
+#endif // CLIENT_HPP

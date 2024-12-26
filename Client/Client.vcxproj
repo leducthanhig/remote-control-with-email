@@ -51,7 +51,6 @@
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -142,18 +141,18 @@
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)env\bin\uic.exe" "$(ProjectDir)mainwindow.ui" -o "$(ProjectDir)ui_mainwindow.h"
-"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)mainwindow.h" -o "$(ProjectDir)moc_mainwindow.cpp"
-"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)worker.h" -o "$(ProjectDir)moc_worker.cpp"</Command>
+      <Command>"$(SolutionDir)env\bin\uic.exe" "$(ProjectDir)mainwindow.ui" -o "$(ProjectDir)ui_mainwindow.hpp"
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)mainwindow.hpp" -o "$(ProjectDir)moc_mainwindow.cpp"
+"$(SolutionDir)env\bin\moc.exe" "$(ProjectDir)worker.hpp" -o "$(ProjectDir)moc_worker.cpp"</Command>
     </PreBuildEvent>
     <Manifest />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="client.h" />
-    <ClInclude Include="gmailapi.h" />
-    <ClInclude Include="mainwindow.h" />
-    <ClInclude Include="ui_mainwindow.h" />
-    <ClInclude Include="worker.h" />
+    <ClInclude Include="client.hpp" />
+    <ClInclude Include="gmailapi.hpp" />
+    <ClInclude Include="mainwindow.hpp" />
+    <ClInclude Include="ui_mainwindow.hpp" />
+    <ClInclude Include="worker.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="client.cpp" />

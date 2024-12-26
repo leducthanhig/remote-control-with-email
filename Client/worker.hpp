@@ -1,5 +1,5 @@
-#ifndef WORKER_H
-#define WORKER_H
+#ifndef WORKER_HPP
+#define WORKER_HPP
 
 #include <functional>
 #include <QtCore/QObject>
@@ -33,4 +33,4 @@ private:
     std::function<std::string()> task;
 };
 
-#endif // WORKER_H
+#endif // WORKER_HPP
