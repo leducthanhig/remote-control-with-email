@@ -2,7 +2,7 @@
 env/
 moc_worker.cpp
 moc_mainwindow.cpp
-ui_mainwindow.h
+ui_mainwindow.hpp
 *.json
 *.txt
 *.png
